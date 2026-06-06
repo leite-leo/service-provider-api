@@ -28,7 +28,7 @@ services:
     image: postgres:16-alpine
     container_name: service-provider-db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       POSTGRES_DB: ${DB_NAME:-service_provider_dev}
       POSTGRES_USER: ${DB_USER:-postgres}
