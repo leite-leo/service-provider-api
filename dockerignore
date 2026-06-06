@@ -1,0 +1,43 @@
+## Node
+node_modules
+npm-debug.log*
+
+## Git
+.git
+.gitignore
+
+## Environment (never bake env files into images)
+.env
+.env.local
+.env.*.local
+
+## Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+## Project docs (not needed at runtime)
+README.md
+LICENSE
+CLAUDE.md
+docs/
+
+## Tests and coverage
+tests/
+coverage/
+.nyc_output/
+
+## IDE / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+## Logs and temp
+*.log
+logs/
+tmp/
+temp/
+.cache/
