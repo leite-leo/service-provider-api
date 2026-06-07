@@ -2,7 +2,7 @@ const Sentry = require('./instrument'); // MUST be the first require
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
-const config = require('./src/config/config');
+const config = require('./src/config/app.config');
 const errorMiddleware = require('./src/middlewares/error.middleware');
 
 const app = express();

@@ -1,5 +1,5 @@
 const Sentry = require('@sentry/node');
-const config = require('./src/config/config');
+const config = require('./src/config/app.config');
 
 /*
  * Sentry is only initialized in production. Dev and test environments
