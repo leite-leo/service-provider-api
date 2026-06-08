@@ -1,12 +1,88 @@
 'use strict';
 
-const { ServiceProvider } = require('../models');
-const { NotFoundError } = require('../utils/errors.utils');
+const Sentry = require('@sentry/node');
+const admin = require('../config/firebase.config');
+const { ServiceProvider, User } = require('../models');
+const { NotFoundError, ConflictError } = require('../utils/errors.utils');
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 
 class ServiceProviderService {
+  async create(
+    { corporateName, taxId, country, phone, email, address,
+      city, state, postalCode, representativeName },
+    adminUserId,
+  ) {
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) throw new ConflictError('A user with this email already exists');
+
+    let firebaseUid;
+    try {
+      const firebaseUser = await admin.auth().createUser({
+        email,
+        displayName: representativeName,
+      });
+      firebaseUid = firebaseUser.uid;
+    } catch (firebaseError) {
+      if (firebaseError.code === 'auth/email-already-exists') {
+        throw new ConflictError('A user with this email already exists');
+      }
+      throw firebaseError;
+    }
+
+    const { sequelize } = ServiceProvider;
+    let provider;
+    let user;
+
+    try {
+      await sequelize.transaction(async (transaction) => {
+        provider = await ServiceProvider.create(
+          {
+            corporateName, taxId, country, phone, email,
+            address, city, state, postalCode,
+            status: 'pending',
+            createdBy: adminUserId,
+          },
+          { transaction },
+        );
+
+        user = await User.create(
+          {
+            firebaseUid, email, name: representativeName,
+            role: 'provider', serviceProviderId: provider.id,
+          },
+          { transaction },
+        );
+      });
+    } catch (dbError) {
+      /*
+       * Postgres transaction failed after Firebase user was already created.
+       * Attempt to delete the Firebase user to keep systems consistent.
+       * If the delete also fails, capture via Sentry — orphaned Firebase users
+       * cannot authenticate (auth middleware requires a local User record),
+       * but the event must remain visible to operators.
+       */
+      try {
+        await admin.auth().deleteUser(firebaseUid);
+      } catch (deleteError) {
+        Sentry.captureException(deleteError, {
+          level: 'error',
+          tags: {
+            issue_type: 'orphaned_firebase_user',
+            firebase_uid: firebaseUid,
+          },
+        });
+        console.error('Failed to delete Firebase user during saga rollback:', deleteError);
+      }
+      throw dbError;
+    }
+
+    const passwordSetupLink = await admin.auth().generatePasswordResetLink(email);
+
+    return { provider, user, passwordSetupLink };
+  }
+
   async findById(id) {
     const provider = await ServiceProvider.findByPk(id);
     if (!provider) throw new NotFoundError('Service provider not found');
