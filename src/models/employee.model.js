@@ -52,7 +52,7 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'serviceProviderId',
       as: 'serviceProvider',
     });
-    // hasMany(Document) added when Document model is created
+    Employee.hasMany(models.Document, { foreignKey: 'employeeId', as: 'documents' });
   };
 
   return Employee;
