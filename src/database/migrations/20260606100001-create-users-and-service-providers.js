@@ -36,7 +36,6 @@ module.exports = {
       service_provider_id: {
         type: Sequelize.UUID,
         allowNull: true,
-        // FK and role/service_provider_id CHECK added in add-fk-users-service-provider migration
       },
       created_at: {
         type: Sequelize.DATE,

@@ -30,7 +30,6 @@ module.exports = (sequelize, DataTypes) => {
       serviceProviderId: {
         type: DataTypes.UUID,
         allowNull: true,
-        // FK and CHECK constraint added in the fk-users-service-provider migration
       },
     },
     {

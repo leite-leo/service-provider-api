@@ -69,11 +69,7 @@ module.exports = {
       CHECK (status IN ('active', 'inactive'));
     `);
 
-    /*
-     * BR002.2 enforces VIN uniqueness platform-wide (already covered by the
-     * UNIQUE column above). BR002.3 does the same for license_plate.
-     * The composite index below is for performance on provider-scoped listings.
-     */
+    // Composite index for provider-scoped vehicle listings filtered by status
     await queryInterface.addIndex('vehicles', ['service_provider_id', 'status'], {
       name: 'idx_vehicles_service_provider_id_status',
     });

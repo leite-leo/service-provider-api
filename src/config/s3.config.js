@@ -18,11 +18,7 @@ const s3 = new S3Client({
   },
 });
 
-/*
- * S3 key pattern: documents/{serviceProviderId}/{documentType}/{documentId}.{ext}
- * The controller populates req.uploadContext before invoking multer so the key
- * function has access to serviceProviderId, documentType, and documentId.
- */
+// S3 key: documents/{providerId}/{type}/{docId}.{ext}
 const upload = multer({
   storage: multerS3({
     s3,

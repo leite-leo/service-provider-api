@@ -57,10 +57,7 @@ module.exports = {
       CHECK (status IN ('active', 'inactive'));
     `);
 
-    /*
-     * Unique constraint on (service_provider_id, email) enforces BR003:
-     * employee emails must be unique within a provider, but not globally.
-     */
+    // Email uniqueness is scoped to a provider, not global
     await queryInterface.addIndex('employees', ['service_provider_id', 'email'], {
       unique: true,
       name: 'uq_employees_provider_email',
