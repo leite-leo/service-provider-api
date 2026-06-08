@@ -41,5 +41,12 @@ module.exports = (sequelize, DataTypes) => {
     },
   );
 
+  User.associate = (models) => {
+    User.belongsTo(models.ServiceProvider, {
+      foreignKey: 'serviceProviderId',
+      as: 'serviceProvider',
+    });
+  };
+
   return User;
 };
