@@ -80,7 +80,8 @@ module.exports = (sequelize, DataTypes) => {
     ServiceProvider.belongsTo(models.User, { foreignKey: 'createdBy', as: 'creator' });
     ServiceProvider.belongsTo(models.User, { foreignKey: 'approvedBy', as: 'approver' });
     ServiceProvider.hasMany(models.Employee, { foreignKey: 'serviceProviderId', as: 'employees' });
-    // hasMany(Vehicle), hasMany(Document) added as those models are created.
+    ServiceProvider.hasMany(models.Vehicle, { foreignKey: 'serviceProviderId', as: 'vehicles' });
+    // hasMany(Document) added when Document model is created.
   };
 
   return ServiceProvider;
