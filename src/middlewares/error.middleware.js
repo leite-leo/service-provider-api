@@ -2,6 +2,7 @@
 
 const { AppError } = require('../utils/errors.utils');
 
+// Express identifies error handlers by 4-arg signature; _next is required even when unused
 module.exports = (err, req, res, _next) => {
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({

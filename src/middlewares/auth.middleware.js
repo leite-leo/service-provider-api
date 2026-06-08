@@ -4,6 +4,8 @@ const admin = require('../config/firebase.config');
 const { User } = require('../models');
 const { UnauthorizedError } = require('../utils/errors.utils');
 
+const CHECK_REVOKED = true;
+
 const FIREBASE_ERROR_MESSAGES = {
   'auth/id-token-expired': 'Token expired',
   'auth/id-token-revoked': 'Token revoked',
@@ -23,7 +25,7 @@ module.exports = async (req, _res, next) => {
 
     let decodedToken;
     try {
-      decodedToken = await admin.auth().verifyIdToken(token, true);
+      decodedToken = await admin.auth().verifyIdToken(token, CHECK_REVOKED);
     } catch (firebaseError) {
       const message = FIREBASE_ERROR_MESSAGES[firebaseError.code] || 'Invalid token';
       throw new UnauthorizedError(message);
