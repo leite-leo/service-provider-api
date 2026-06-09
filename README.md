@@ -150,11 +150,8 @@ Providers
 GET    /providers                       [admin]
 GET    /providers/:id
 POST   /providers                       [admin] — creates Firebase user, returns passwordSetupLink in body
-PATCH  /providers/:id
-DELETE /providers/:id                   Soft delete (status → inactive)
 POST   /providers/:id/approve           [admin]
 POST   /providers/:id/deactivate        [admin]
-POST   /providers/:id/reactivate        [admin]
 POST   /providers/:id/regenerate-invite [admin] — new passwordSetupLink for an existing provider user
 GET    /providers/:id/compliance        Computed compliance status
 
