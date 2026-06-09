@@ -9,6 +9,38 @@ const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 
 class ServiceProviderService {
+  async findById(id) {
+    const provider = await ServiceProvider.findByPk(id);
+    if (!provider) throw new NotFoundError('Service provider not found');
+    return provider;
+  }
+
+  async findAll({ status, country, page = 1, limit = DEFAULT_PAGE_SIZE } = {}) {
+    const safeLimit = Math.min(limit, MAX_PAGE_SIZE);
+    const offset = (page - 1) * safeLimit;
+
+    const where = {};
+    if (status) where.status = status;
+    if (country) where.country = country;
+
+    const { count, rows } = await ServiceProvider.findAndCountAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      limit: safeLimit,
+      offset,
+    });
+
+    return {
+      data: rows,
+      pagination: {
+        page,
+        limit: safeLimit,
+        total: count,
+        total_pages: Math.ceil(count / safeLimit),
+      },
+    };
+  }
+
   async create(
     { corporateName, taxId, country, phone, email, address,
       city, state, postalCode, representativeName },
@@ -111,36 +143,14 @@ class ServiceProviderService {
     return provider;
   }
 
-  async findById(id) {
-    const provider = await ServiceProvider.findByPk(id);
-    if (!provider) throw new NotFoundError('Service provider not found');
-    return provider;
-  }
-
-  async findAll({ status, country, page = 1, limit = DEFAULT_PAGE_SIZE } = {}) {
-    const safeLimit = Math.min(limit, MAX_PAGE_SIZE);
-    const offset = (page - 1) * safeLimit;
-
-    const where = {};
-    if (status) where.status = status;
-    if (country) where.country = country;
-
-    const { count, rows } = await ServiceProvider.findAndCountAll({
-      where,
-      order: [['createdAt', 'DESC']],
-      limit: safeLimit,
-      offset,
+  async regenerateInvite(id) {
+    const provider = await this.findById(id);
+    const user = await User.findOne({
+      where: { serviceProviderId: provider.id, role: 'provider' },
     });
-
-    return {
-      data: rows,
-      pagination: {
-        page,
-        limit: safeLimit,
-        total: count,
-        total_pages: Math.ceil(count / safeLimit),
-      },
-    };
+    if (!user) throw new NotFoundError(`No provider user found for provider ${id}`);
+    const passwordSetupLink = await admin.auth().generatePasswordResetLink(user.email);
+    return { passwordSetupLink };
   }
 }
 
