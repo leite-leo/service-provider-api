@@ -47,6 +47,7 @@ erDiagram
         uuid approved_by FK
         uuid created_by FK
         timestamp status_changed_at
+        uuid status_changed_by FK
         timestamp created_at
         timestamp updated_at
     }
@@ -134,6 +135,7 @@ Holds provider company records.
 | `approved_by`          | UUID        | FK to `users(id)`, NULLABLE                          |
 | `created_by`           | UUID        | FK to `users(id)`, NOT NULL                          |
 | `status_changed_at`    | TIMESTAMPTZ | NULLABLE                                             |
+| `status_changed_by`    | UUID        | FK to `users(id)`, ON DELETE SET NULL, NULLABLE      |
 | `created_at`           | TIMESTAMPTZ | NOT NULL                                             |
 | `updated_at`           | TIMESTAMPTZ | NOT NULL                                             |
 
@@ -271,6 +273,7 @@ Beyond `created_at` and `updated_at`, the schema captures targeted audit data on
 - `service_providers.created_by` — captures the administrator who created the provider record. See `business-rules.md` for the admin-onboarding model that makes this field always populated and always an admin.
 - `service_providers.approved_at` and `service_providers.approved_by` — capture who approved the provider and when, since provider approval is a privileged state transition.
 - `service_providers.status_changed_at` — captures the timestamp of the most recent status change for any other transition.
+- `service_providers.status_changed_by` — captures the administrator who performed the most recent status change. Combined with `status_changed_at`, provides a complete who-and-when audit trail for every status transition.
 - `documents.uploaded_by` — captures the user who uploaded each document.
 
 A general audit log table is intentionally out of scope. The fields above cover the audit needs of the current business rules without adding the operational burden of a generic change log.

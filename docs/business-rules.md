@@ -122,7 +122,7 @@ A provider is one of:
 
 - **`pending`** — initial state when a provider is created. Cannot operate; visible only to administrators.
 - **`approved`** — active state. The provider can be assigned services. Records `approved_at` and `approved_by`.
-- **`inactive`** — soft-deleted state. Records remain in the database; provider cannot operate. Records `status_changed_at`.
+- **`inactive`** — soft-deleted state. Records remain in the database; provider cannot operate. Records `status_changed_at` and `status_changed_by`.
 
 Valid transitions:
 
@@ -130,6 +130,8 @@ Valid transitions:
 - `pending → inactive` (admin action, rejection equivalent)
 - `approved → inactive` (admin action, deactivation)
 - `inactive → approved` (admin action, reactivation)
+
+Every status transition records `status_changed_at` (timestamp) and `status_changed_by` (admin user id) on the provider. For `pending → approved`, `approved_at` and `approved_by` are additionally recorded as a permanent marker of the approval event.
 
 ### Employee and Vehicle Status
 
