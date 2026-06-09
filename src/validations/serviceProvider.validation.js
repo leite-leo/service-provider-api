@@ -12,8 +12,8 @@ const providerParams = z.object({
 
 const paginationQuery = z.object({
   query: z.object({
-    page:    z.coerce.number().int().min(1).optional().default(1),
-    limit:   z.coerce.number().int().min(1).max(100).optional().default(20),
+    page:    z.coerce.number().int().min(1).optional(),
+    limit:   z.coerce.number().int().min(1).max(100).optional(),
     status:  z.enum(['pending', 'approved', 'inactive']).optional(),
     country: z.enum(SUPPORTED_COUNTRIES).optional(),
   }),
