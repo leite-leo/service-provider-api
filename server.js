@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const config = require('./src/config/app.config');
+const routes = require('./src/routes');
 const errorMiddleware = require('./src/middlewares/error.middleware');
 
 const app = express();
@@ -12,9 +13,7 @@ app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok' });
-});
+app.use(routes);
 
 /*
  * Sentry's Express error handler must come BEFORE the application
