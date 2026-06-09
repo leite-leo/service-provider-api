@@ -83,6 +83,34 @@ class ServiceProviderService {
     return { provider, user, passwordSetupLink };
   }
 
+  async approve(id, adminUserId) {
+    const provider = await this.findById(id);
+    if (provider.status !== 'pending') {
+      throw new ConflictError(`Cannot approve a provider in ${provider.status} state`);
+    }
+    const now = new Date();
+    provider.status = 'approved';
+    provider.approvedAt = now;
+    provider.approvedBy = adminUserId;
+    provider.statusChangedAt = now;
+    provider.statusChangedBy = adminUserId;
+    await provider.save();
+    return provider;
+  }
+
+  async deactivate(id, adminUserId) {
+    const provider = await this.findById(id);
+    if (!['pending', 'approved'].includes(provider.status)) {
+      throw new ConflictError(`Cannot deactivate a provider in ${provider.status} state`);
+    }
+    const now = new Date();
+    provider.status = 'inactive';
+    provider.statusChangedAt = now;
+    provider.statusChangedBy = adminUserId;
+    await provider.save();
+    return provider;
+  }
+
   async findById(id) {
     const provider = await ServiceProvider.findByPk(id);
     if (!provider) throw new NotFoundError('Service provider not found');
