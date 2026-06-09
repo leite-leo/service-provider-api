@@ -129,7 +129,6 @@ Valid transitions:
 - `pending → approved` (admin action)
 - `pending → inactive` (admin action, rejection equivalent)
 - `approved → inactive` (admin action, deactivation)
-- `inactive → approved` (admin action, reactivation)
 
 Every status transition records `status_changed_at` (timestamp) and `status_changed_by` (admin user id) on the provider. For `pending → approved`, `approved_at` and `approved_by` are additionally recorded as a permanent marker of the approval event.
 
