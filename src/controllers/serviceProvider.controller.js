@@ -1,6 +1,7 @@
 'use strict';
 
 const serviceProviderService = require('../services/serviceProvider.service');
+const { ForbiddenError } = require('../utils/errors.utils');
 
 module.exports = {
   async list(req, res, next) {
@@ -16,6 +17,11 @@ module.exports = {
   async show(req, res, next) {
     try {
       const { id } = req.params;
+      const isAdmin = req.user.role === 'admin';
+      const isOwnProvider = req.user.role === 'provider' && req.user.serviceProviderId === id;
+      if (!isAdmin && !isOwnProvider) {
+        throw new ForbiddenError();
+      }
       const provider = await serviceProviderService.findById(id);
       return res.status(200).json(provider);
     } catch (error) {
