@@ -44,6 +44,7 @@ RUN addgroup -g 1001 -S nodejs && \
 ## Copy only the production artifacts from the build stage
 COPY --from=build --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --from=build --chown=nodejs:nodejs /app/package*.json ./
+COPY --from=build --chown=nodejs:nodejs /app/.sequelizerc ./
 COPY --from=build --chown=nodejs:nodejs /app/server.js ./
 COPY --from=build --chown=nodejs:nodejs /app/instrument.js ./
 COPY --from=build --chown=nodejs:nodejs /app/src ./src
