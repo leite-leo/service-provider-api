@@ -5,6 +5,7 @@ const morgan = require('morgan');
 const config = require('./src/config/app.config');
 const routes = require('./src/routes');
 const errorMiddleware = require('./src/middlewares/error.middleware');
+const { runPendingMigrations } = require('./src/utils/migrate.utils');
 
 const app = express();
 
@@ -23,6 +24,18 @@ app.use(routes);
 Sentry.setupExpressErrorHandler(app);
 app.use(errorMiddleware);
 
-app.listen(config.app.port, () => {
-  console.log(`Server listening on port ${config.app.port}`);
+async function bootstrap() {
+  if (config.app.env === 'production') {
+    console.log('Running pending migrations...');
+    await runPendingMigrations();
+  }
+
+  app.listen(config.app.port, () => {
+    console.log(`Server listening on port ${config.app.port}`);
+  });
+}
+
+bootstrap().catch((error) => {
+  console.error('Bootstrap failed:', error);
+  process.exit(1);
 });
