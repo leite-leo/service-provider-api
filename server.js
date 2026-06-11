@@ -7,6 +7,7 @@ const routes = require('./src/routes');
 const errorMiddleware = require('./src/middlewares/error.middleware');
 const { runPendingMigrations } = require('./src/utils/migrate.utils');
 const { runSeeders } = require('./src/utils/seed.utils');
+const { NotFoundError } = require('./src/utils/errors.utils');
 
 const app = express();
 
@@ -16,6 +17,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(routes);
+
+// 404 handler for unmatched routes — must come AFTER all route definitions
+// and BEFORE error handlers so unmatched paths return our JSON format
+// instead of Express's default HTML response.
+app.use((req, _res, next) => {
+  next(new NotFoundError(`Route ${req.method} ${req.originalUrl} not found`));
+});
 
 /*
  * Sentry's Express error handler must come BEFORE the application
