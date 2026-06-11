@@ -36,6 +36,7 @@ module.exports = {
     privateKey: process.env.FIREBASE_PRIVATE_KEY
       ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
       : undefined,
+    webApiKey: process.env.FIREBASE_WEB_API_KEY,
   },
   s3: {
     region: process.env.AWS_REGION,
