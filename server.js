@@ -6,6 +6,7 @@ const config = require('./src/config/app.config');
 const routes = require('./src/routes');
 const errorMiddleware = require('./src/middlewares/error.middleware');
 const { runPendingMigrations } = require('./src/utils/migrate.utils');
+const { runSeeders } = require('./src/utils/seed.utils');
 
 const app = express();
 
@@ -28,6 +29,9 @@ async function bootstrap() {
   if (config.app.env === 'production') {
     console.log('Running pending migrations...');
     await runPendingMigrations();
+
+    console.log('Running seeders...');
+    await runSeeders();
   }
 
   app.listen(config.app.port, () => {
