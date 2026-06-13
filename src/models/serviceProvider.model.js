@@ -59,10 +59,6 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.UUID,
         allowNull: true,
       },
-      createdBy: {
-        type: DataTypes.UUID,
-        allowNull: false,
-      },
       statusChangedAt: {
         type: DataTypes.DATE,
         allowNull: true,
@@ -81,7 +77,6 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   ServiceProvider.associate = (models) => {
-    ServiceProvider.belongsTo(models.User, { foreignKey: 'createdBy', as: 'creator' });
     ServiceProvider.belongsTo(models.User, { foreignKey: 'approvedBy', as: 'approver' });
     ServiceProvider.belongsTo(models.User, { foreignKey: 'statusChangedBy', as: 'statusChanger' });
     ServiceProvider.hasMany(models.Employee, { foreignKey: 'serviceProviderId', as: 'employees' });
