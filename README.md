@@ -143,41 +143,26 @@ A complete template is in `.env.example`. The application validates required var
 ### Endpoints
 
 ```
-Auth & User
-GET    /me                              Current authenticated user
+Auth
+POST   /login                                   public
 
 Providers
-GET    /providers                       [admin]
-GET    /providers/:id
-POST   /providers                       [admin] — creates Firebase user, returns passwordSetupLink in body
-POST   /providers/:id/approve           [admin]
-POST   /providers/:id/deactivate        [admin]
-POST   /providers/:id/regenerate-invite [admin] — new passwordSetupLink for an existing provider user
-GET    /providers/:id/compliance        Computed compliance status
+POST   /providers                               public — self-registration
+GET    /providers                               admin only
+GET    /providers/:id                           admin or own provider
+POST   /providers/me/submit                     provider only — submit for review
+POST   /providers/:id/approve                   admin only — gated by compliance
+POST   /providers/:id/reject                    admin only — back to pending
+POST   /providers/:id/deactivate                admin only
+GET    /providers/:id/compliance                admin or own provider
 
-Employees                               (provider role sees only own resources)
-GET    /employees
-GET    /employees/:id
-POST   /employees
-PATCH  /employees/:id
-DELETE /employees/:id                   Soft delete (status → inactive)
-
-Vehicles                                (provider role sees only own resources)
-GET    /vehicles
-GET    /vehicles/:id
-POST   /vehicles
-PATCH  /vehicles/:id
-DELETE /vehicles/:id                    Soft delete (status → inactive)
-
-Documents                               (provider role sees only own resources)
-POST   /documents                       Multipart upload
-GET    /documents/:id
-DELETE /documents/:id                   Soft delete (status → archived)
+Employees, Vehicles, Documents
+CRUD scoped to provider's own resources; admin sees all
 ```
 
-All endpoints require a valid Firebase ID token in the `Authorization` header. List endpoints (`GET /providers`, `GET /employees`, etc.) support pagination via `?page=1&limit=20` and resource-appropriate filtering (`?status=approved`, `?country=BR`, `?document_type=driver_license`).
+Except `POST /login` and `POST /providers`, all endpoints require a valid Firebase ID token in the `Authorization` header. List endpoints support pagination via `?page=1&limit=20` and resource-appropriate filtering (`?status=approved`, `?country=BR`, `?document_type=driver_license`).
 
-**On provider creation:** `POST /providers` orchestrates the creation of the Firebase Authentication account for the provider's representative (without password) and returns a `passwordSetupLink` in the response body. The administrator forwards this link to the representative through any preferred channel; the system does not send emails. See [docs/business-rules.md](docs/business-rules.md) for the full onboarding flow and [docs/architecture.md](docs/architecture.md) for the design rationale.
+**Provider self-registration:** `POST /providers` is a public endpoint. The representative submits company data and account credentials in a single request; the backend creates the Firebase Authentication account and the local user record atomically. See [docs/business-rules.md](docs/business-rules.md) for the full onboarding flow and [docs/architecture.md](docs/architecture.md) for the design rationale.
 
 ### Interactive documentation
 

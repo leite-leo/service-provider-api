@@ -71,49 +71,62 @@ Clarity, organization, and maintainability are prioritized over technical sophis
 **Consequences.**
 
 - No `password` column exists in the `users` table. The application database stores no credentials.
-- A middleware (`authMiddleware`) extracts the `Authorization: Bearer <token>` header, verifies it with `admin.auth().verifyIdToken()`, and loads the corresponding local `User` record by `firebase_uid`.
+- A middleware (`authMiddleware`) extracts the `Authorization: Bearer <token>` header, verifies it with `admin.auth().verifyIdToken()`, and loads the corresponding local `User` record by `firebase_uid`. If no local record exists for a verified token, the request is rejected with HTTP 401 — user records are created during self-registration, not on first login.
 - A separate middleware (`requireRole`) checks the application-level role attached to the local user record.
-- The local `User` record is synchronized on first login: when a token verifies but no local user exists, the record is created using the Firebase user data (`uid`, `email`, `name`). Subsequent logins update the local record if Firebase data has changed.
 - Token expiration is handled by Firebase; the API simply rejects expired tokens with HTTP 401. Refresh is handled by the client using the Firebase client SDK.
-- The README documents this decision explicitly to set reader expectations.
 
-What this demonstrates technically: integration with an external identity provider, middleware composition, separation between authentication (Firebase) and authorization (application-level role), local user record synchronization, and token verification flow.
+What this demonstrates technically: integration with an external identity provider, middleware composition, separation between authentication (Firebase) and authorization (application-level role), and token verification flow.
 
 ## User Provisioning: Backend-Orchestrated via Firebase Admin SDK
 
-**Context.** Providers are admin-onboarded (see *Admin-Onboarding Model* below). The administrator needs to create the provider's representative as a Firebase user without ever knowing the representative's password. The representative defines their own password but does not self-register.
+**Context.** Provider self-registration creates both a `ServiceProvider` record and a Firebase Authentication user for the representative, atomically. The two systems do not share a transaction.
 
-**Decision.** The backend uses the Firebase Admin SDK to provision users during provider creation. The flow:
+**Decision.** The backend uses the Firebase Admin SDK to create the authentication user during provider self-registration. The flow:
 
-1. `POST /providers` receives provider data plus the representative's email and name.
-2. Backend creates the Firebase user via `admin.auth().createUser({ email, displayName })` with no password.
+1. `POST /providers` receives provider data plus the representative's email, name, and password.
+2. Backend creates the Firebase user via `admin.auth().createUser({ email, displayName, password })` with the password provided in the request.
 3. Backend creates the local `User` record linked to the new `ServiceProvider`.
-4. Backend generates a password setup link via `admin.auth().generatePasswordResetLink(email)`.
-5. Backend returns the created provider, the created user, and the `passwordSetupLink` in the response body.
-
-The administrator delivers the link to the representative through whatever channel they prefer. Email delivery from the backend is explicitly out of scope; the link is returned in the response for the administrator to forward manually.
+4. Backend returns the created provider and user.
 
 **Alternatives considered.**
 
-- *Admin sets the password.* Rejected. The administrator would know the representative's password, which is an anti-pattern in B2B systems. A "force change on first login" mitigation adds complexity without addressing the underlying smell.
-- *Backend sends the setup link via email or SMS.* Rejected. Requires email or messaging infrastructure (SMTP, SES, SendGrid, Twilio) that is out of declared scope. The link-in-response pattern preserves the core security property (representative sets own password) without the supporting infrastructure. In a production B2B SaaS, the same backend would additionally send the link via email — the API contract remains unchanged.
-- *Pending-invite pattern without creating the Firebase user upfront.* Rejected. Would allow anyone who learns the invited email to register first and claim the provider account. Closing that gap requires invitation tokens and additional validation flow, which ends up more complex than the current approach.
-- *Magic links / passwordless authentication.* Rejected. Most B2B representatives expect password-based access; magic links can be confusing and tie ongoing access to email delivery reliability.
+- *Admin-mediated user provisioning with passwordSetupLink.* Rejected per Self-Registration Model decision (below).
+- *Direct Firebase client-side registration by the provider representative.* Rejected: would split the provider record creation and the user creation across two requests, requiring coordination and reconciliation logic. Backend-orchestrated keeps the two consistent atomically.
+- *Magic links / passwordless.* Rejected: most B2B representatives expect password-based access; magic links can be confusing and tie ongoing access to email delivery reliability.
 
 **Consequences.**
 
-- The Firebase Admin SDK is used for more than token verification: `createUser`, `generatePasswordResetLink`, and `deleteUser` (as a compensating action) are part of the backend's responsibilities. The `src/config/firebase.js` module exports the full `admin` namespace.
+- The Firebase Admin SDK is used for `createUser` and `deleteUser` (as a compensating action). The `src/config/firebase.js` module exports the full `admin` namespace.
 - Provider creation involves two systems (Firebase and Postgres) that cannot share a transaction. The implementation uses a saga-style compensating action: if the database transaction fails after the Firebase user is created, the Firebase user is deleted before the error response is returned. This keeps the two systems consistent without distributed transactions.
-- A companion endpoint `POST /providers/:id/regenerate-invite` generates a fresh setup link if the original expired (Firebase default expiration is one hour). The same endpoint also serves as an admin-triggered password reset for already-active provider users — the Firebase API used (`generatePasswordResetLink`) behaves identically in both cases.
-- Email and messaging delivery infrastructure is documented as future scope. The link-in-response pattern is the production-acceptable shape for this project; adding email later would not change the API contract, only the side-effect of the endpoint.
+- The representative's password is accepted in the request body. The Zod schema validates input shape only (non-empty string). Firebase's password policy (minimum 8 characters, requires uppercase, lowercase, and numeric) is enforced server-side by Firebase, which returns an error if the policy is not met. The error is translated to the standard API error format.
+- In a production B2B SaaS, the same flow would additionally require email verification before the provider could move to `pending_review` status.
 
 ## Data Model Decisions
+
+### Self-Registration Model
+
+**Context.** A provider company must exist in the system as a `ServiceProvider` record, and the user representing that provider must exist as a `User` linked to it. The question is whether administrators create the records on behalf of providers, or providers self-register and submit for admin review.
+
+**Decision.** Providers self-register via a public endpoint. After self-registration, the provider completes their data, then submits for admin review. The admin approves contingent on compliance passing.
+
+**Alternatives considered.**
+
+- *Admin-onboarding (admin creates `ServiceProvider` on provider's behalf, provider rep gets a setup link).* Rejected for two reasons: (1) creates friction in the portfolio demo flow — a recruiter has to switch between admin and provider contexts multiple times to exercise the full lifecycle; (2) misaligns with modern SaaS self-service onboarding patterns (Stripe Connect, Shopify Partners, etc.). A coherent compliance feature requires the submitter and validator to be different actors; admin-onboarding makes them the same.
+- *Hybrid (admin can invite, provider can also self-register).* Rejected: two parallel onboarding paths add complexity without clear benefit at this scope. A single path is simpler and sufficient.
+
+**Consequences.**
+
+- `POST /providers` is public (no authentication required).
+- The `ServiceProvider` record carries no `created_by` audit field; self-registration removes the meaningful audit semantic.
+- The provider lifecycle introduces an intermediate `pending_review` state between `pending` and `approved`, marking "provider has signaled completion, awaiting admin decision".
+- Approval is gated by compliance passing. Admin cannot approve a non-compliant provider; the approve endpoint returns HTTP 422 with details of missing or expired documents in that case.
+- Production hardening (rate limiting, CAPTCHA on public registration, email verification before provider can submit) is out of declared scope for this version and documented as future work.
 
 ### Soft Delete via Status Fields
 
 **Context.** Some records must remain queryable after they are no longer operational. Deleting a provider must not delete its historical documents.
 
-**Decision.** Use explicit status fields per entity (`pending`/`approved`/`inactive` for providers, `active`/`inactive` for employees and vehicles, `active`/`expired`/`archived` for documents). Do not use `deleted_at` columns or Sequelize paranoid mode.
+**Decision.** Use explicit status fields per entity (`pending`/`pending_review`/`approved`/`inactive` for providers, `active`/`inactive` for employees and vehicles, `active`/`expired`/`archived` for documents). Do not use `deleted_at` columns or Sequelize paranoid mode.
 
 **Alternatives considered.**
 
@@ -154,23 +167,6 @@ The administrator delivers the link to the representative through whatever chann
 - The compliance computation only ever considers documents with `status = 'active'`.
 - Race conditions on concurrent uploads are caught by the partial unique index; the application returns HTTP 409 with a meaningful error code.
 
-### Admin-Onboarding Model
-
-**Context.** A provider company must exist in the system as a `ServiceProvider` record, and the user representing that provider must exist as a `User` linked to it. The question is whether providers register themselves or are created by administrators.
-
-**Decision.** Administrators create `ServiceProvider` records on behalf of providers. Self-registration is not supported. The provider's user authenticates via Firebase only after the administrator has created the company record and invited the representative.
-
-**Alternatives considered.**
-
-- *Self-registration with email verification and pending-approval workflow.* Rejected for scope reasons: requires email verification flow, anti-fraud measures, and handling of an intermediate state where a `User` exists without a linked `ServiceProvider`. This complexity is not justified for the project's purpose.
-- *Hybrid (admins can create, providers can also self-register).* Rejected: the worst of both worlds — full self-registration complexity plus the maintenance burden of two parallel onboarding paths.
-
-**Consequences.**
-
-- The `created_by` audit column on `ServiceProvider` is always populated and always references an administrator user. The application enforces this invariant.
-- The flow is documented in `business-rules.md` as part of the user role model.
-- Adding self-registration in the future would be a new feature, requiring a deliberate decision and probably a new endpoint set rather than a modification of existing endpoints.
-
 ### Vehicle Type as Enum, Not Separate Table
 
 **Context.** Vehicles in the system belong to a small set of categories (car, van, truck, motorcycle). The category influences how the vehicle is described but does not currently influence required documents or business rules.
@@ -189,7 +185,7 @@ The administrator delivers the link to the representative through whatever chann
 
 ### Audit Fields
 
-Provider creation, approval, and ongoing status changes are the most consequential state transitions in the system. The schema captures `created_by`, `approved_at`, `approved_by`, and `status_changed_at` on `service_providers` to record these transitions. Documents carry `uploaded_by` to identify the user who provided each file.
+Provider approval and ongoing status changes are the most consequential state transitions in the system. The schema captures `approved_at`, `approved_by`, `status_changed_at`, and `status_changed_by` on `service_providers` to record these transitions. Documents carry `uploaded_by` to identify the user who provided each file.
 
 A generic audit log table is intentionally out of scope. The targeted fields cover the system's actual audit needs.
 
@@ -203,30 +199,28 @@ The service walks the provider's required documents (own `tax_id`, each active e
 
 This design choice — computation over storage — avoids the cache invalidation problems that come with a denormalized compliance column. The endpoint runs a bounded number of queries and is fast enough for the scale of this project.
 
+Beyond informational use, compliance is a functional gate for provider approval. `POST /providers/:id/approve` checks compliance before transitioning the status; a non-compliant provider receives HTTP 422 with the compliance details in the error body, and the status transition does not occur. This makes the compliance endpoint both a query tool for administrators and a precondition for approval.
+
 ### Document Expiration Job
 
 A daily cron job runs at 03:00 UTC, scans `documents WHERE status = 'active' AND expires_at < NOW()`, and transitions matching rows to `status = 'expired'`. This is the only automatic business-logic status transition in the system.
 
 The job uses `node-cron` for scheduling. There is no distributed lock or job queue: a single process runs the job, which is acceptable because the project deploys as a single instance. If the project later scaled to multiple instances, this assumption would need to be revisited.
 
-### Demo Data Reset Job
-
-A second cron job runs daily at 04:00 UTC **only when `NODE_ENV === 'production'`** (i.e., on the deployed demo instance). It clears non-seed data and re-runs the seeders, producing a clean demo state for portfolio visitors. This job does not run in development or test environments.
-
-Concretely, the job:
-
-1. Deletes all `Document`, `Employee`, `Vehicle`, and `ServiceProvider` records (in dependency order to respect foreign keys), except those created by the seeders.
-2. Re-runs the demo seeders to recreate the demo administrator user, the demo provider user, and a small amount of representative demo data.
-
-The Firebase users created by the seeders (`admin@demo.com`, `provider@demo.com`) persist across resets — the seeder is idempotent in Firebase (`getUserByEmail` first, create only if missing). This means the documented demo credentials in the README continue to work after every reset.
-
-Demo data created by visitors during testing **does not persist** through this reset. The README's Demo Access section documents this clearly so visitors do not store anything meaningful in the instance.
-
 ### Status Transitions with Auditing
 
-Provider status transitions (`pending → approved`, `pending → inactive`, `approved → inactive`, `inactive → approved`) are exposed via dedicated endpoints rather than generic `PATCH /providers/:id`. This makes the transitions discoverable, audit-loggable, and easier to validate.
+Provider status transitions are exposed via dedicated endpoints rather than a generic `PATCH /providers/:id`. This makes the transitions discoverable, audit-loggable, and easier to validate.
 
-Each transition endpoint updates the appropriate audit fields (`approved_at` and `approved_by` for approval; `status_changed_at` for others) atomically with the status change.
+The full set of transitions:
+
+- `pending → pending_review` — provider self-submits via `POST /providers/me/submit`.
+- `pending_review → pending` — admin rejects via `POST /providers/:id/reject`.
+- `pending_review → approved` — admin approves via `POST /providers/:id/approve`, gated by compliance passing.
+- `pending → inactive` — admin deactivates.
+- `pending_review → inactive` — admin deactivates.
+- `approved → inactive` — admin deactivates.
+
+Each transition endpoint updates the appropriate audit fields (`approved_at` and `approved_by` for approval; `status_changed_at` and `status_changed_by` for others) atomically with the status change.
 
 ## File Storage
 
@@ -335,7 +329,7 @@ Sentry handles error tracking and exception monitoring. The Sentry SDK is initia
 
 Morgan handles HTTP access logging in `combined` format, writing to stdout. The deployment platform captures stdout for log retention.
 
-A separate application logger (pino, winston) is intentionally omitted. Business events that matter for audit are captured in dedicated database columns (`approved_at`, `approved_by`, `uploaded_by`, `status_changed_at`) rather than in log lines.
+A separate application logger (pino, winston) is intentionally omitted. Business events that matter for audit are captured in dedicated database columns (`approved_at`, `approved_by`, `status_changed_by`, `uploaded_by`, `status_changed_at`) rather than in log lines.
 
 ## Infrastructure
 
@@ -358,11 +352,11 @@ The application reads `process.env` in exactly one place: `src/config/config.js`
 
 The Sequelize production configuration uses `use_env_variable: 'DATABASE_URL'` rather than discrete `DB_*` variables, which is the documented Sequelize pattern for accepting a single connection URL. This is what allows the Render + Neon deployment to work without code changes between environments.
 
-### Migrations: sequelize-cli
+### Migrations and Seeders
 
-Schema changes are versioned migrations under `database/migrations/`. The `sync()` method is never used. Every migration has a tested `down`. The CI pipeline runs `npx sequelize-cli db:migrate` against an ephemeral database to confirm migrations are forward-applicable.
+Schema changes are versioned migrations under `database/migrations/`. The `sync()` method is never used. Every migration has a tested `down`.
 
-Seeders for development data are under `database/seeders/` and are run manually.
+Pending migrations run automatically on production startup before the HTTP server begins accepting requests. If a migration fails, the process exits with code 1 and the deployment is marked as failed. Seeders run on every production startup immediately after migrations; each seeder is idempotent so repeated runs are safe. In local development, both are run manually via `sequelize-cli`.
 
 ### Deployment: Render + Neon
 
@@ -395,7 +389,7 @@ These items are deliberately out of scope for this project. They are listed so r
 - Multi-tenancy beyond the existing provider scoping.
 - Real-time features (WebSockets, server-sent events).
 - Payment processing or billing integration.
-- Email or SMS delivery. The `passwordSetupLink` from `POST /providers` is returned in the response body for the administrator to forward through their preferred channel; no SMTP, SES, SendGrid, Twilio, or similar service is integrated.
+- Rate limiting and CAPTCHA on public `POST /providers`. Acceptable for portfolio scope; would be required for production.
 - Internationalization or localization of the API surface.
 - An audit log table (the targeted audit columns are sufficient).
 - Cursor-based pagination (offset is sufficient at this scale).

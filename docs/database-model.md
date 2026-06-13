@@ -45,7 +45,6 @@ erDiagram
         string status
         timestamp approved_at
         uuid approved_by FK
-        uuid created_by FK
         timestamp status_changed_at
         uuid status_changed_by FK
         timestamp created_at
@@ -118,26 +117,25 @@ A user with `role = 'provider'` must have a non-null `service_provider_id`. A us
 
 Holds provider company records.
 
-| Column                 | Type        | Constraints                                          |
-| ---------------------- | ----------- | ---------------------------------------------------- |
-| `id`                   | UUID        | PK                                                   |
-| `corporate_name`       | VARCHAR     | NOT NULL                                             |
-| `tax_id`               | VARCHAR     | UNIQUE, NOT NULL                                     |
-| `country`              | CHAR(2)     | NOT NULL, CHECK IN (`BR`,`US`,`DE`,`GB`,`FR`)        |
-| `phone`                | VARCHAR     | NOT NULL                                             |
-| `email`                | VARCHAR     | NOT NULL                                             |
-| `address`              | VARCHAR     | NOT NULL                                             |
-| `city`                 | VARCHAR     | NOT NULL                                             |
-| `state`                | VARCHAR     | NOT NULL                                             |
-| `postal_code`          | VARCHAR     | NOT NULL                                             |
-| `status`               | VARCHAR     | NOT NULL, CHECK IN (`pending`,`approved`,`inactive`) |
-| `approved_at`          | TIMESTAMPTZ | NULLABLE                                             |
-| `approved_by`          | UUID        | FK to `users(id)`, NULLABLE                          |
-| `created_by`           | UUID        | FK to `users(id)`, NOT NULL                          |
-| `status_changed_at`    | TIMESTAMPTZ | NULLABLE                                             |
-| `status_changed_by`    | UUID        | FK to `users(id)`, ON DELETE SET NULL, NULLABLE      |
-| `created_at`           | TIMESTAMPTZ | NOT NULL                                             |
-| `updated_at`           | TIMESTAMPTZ | NOT NULL                                             |
+| Column                 | Type        | Constraints                                                                        |
+| ---------------------- | ----------- | ---------------------------------------------------------------------------------- |
+| `id`                   | UUID        | PK                                                                                 |
+| `corporate_name`       | VARCHAR     | NOT NULL                                                                           |
+| `tax_id`               | VARCHAR     | UNIQUE, NOT NULL                                                                   |
+| `country`              | CHAR(2)     | NOT NULL, CHECK IN (`BR`,`US`,`DE`,`GB`,`FR`)                                      |
+| `phone`                | VARCHAR     | NOT NULL                                                                           |
+| `email`                | VARCHAR     | NOT NULL                                                                           |
+| `address`              | VARCHAR     | NOT NULL                                                                           |
+| `city`                 | VARCHAR     | NOT NULL                                                                           |
+| `state`                | VARCHAR     | NOT NULL                                                                           |
+| `postal_code`          | VARCHAR     | NOT NULL                                                                           |
+| `status`               | VARCHAR     | NOT NULL, CHECK IN (`pending`,`pending_review`,`approved`,`inactive`)              |
+| `approved_at`          | TIMESTAMPTZ | NULLABLE                                                                           |
+| `approved_by`          | UUID        | FK to `users(id)`, NULLABLE                                                        |
+| `status_changed_at`    | TIMESTAMPTZ | NULLABLE                                                                           |
+| `status_changed_by`    | UUID        | FK to `users(id)`, ON DELETE SET NULL, NULLABLE                                    |
+| `created_at`           | TIMESTAMPTZ | NOT NULL                                                                           |
+| `updated_at`           | TIMESTAMPTZ | NOT NULL                                                                           |
 
 ### `employees`
 
@@ -258,7 +256,7 @@ Status values use lowercase strings without spaces (`pending`, `approved`, `inac
 
 All schema changes are managed by `sequelize-cli` migrations versioned in `database/migrations/`. The `sync()` method is never used in any environment, including development. Each migration is reversible; `down` methods are written and tested before merging.
 
-Seeders for development data (sample admin user, a handful of providers, employees, vehicles, and documents) live in `database/seeders/` and are executed manually.
+Seeders live in `database/seeders/` and run automatically on production startup. For local development they can be executed manually via `sequelize-cli db:seed:all`.
 
 ## Soft Delete Strategy
 
@@ -270,10 +268,9 @@ This decision keeps queries explicit about which records they include, avoids th
 
 Beyond `created_at` and `updated_at`, the schema captures targeted audit data only where it is meaningful:
 
-- `service_providers.created_by` — captures the administrator who created the provider record. See `business-rules.md` for the admin-onboarding model that makes this field always populated and always an admin.
 - `service_providers.approved_at` and `service_providers.approved_by` — capture who approved the provider and when, since provider approval is a privileged state transition.
-- `service_providers.status_changed_at` — captures the timestamp of the most recent status change for any other transition.
-- `service_providers.status_changed_by` — captures the administrator who performed the most recent status change. Combined with `status_changed_at`, provides a complete who-and-when audit trail for every status transition.
+- `service_providers.status_changed_at` — captures the timestamp of the most recent status change for any transition.
+- `service_providers.status_changed_by` — captures the user who performed the most recent status change. Combined with `status_changed_at`, provides a complete who-and-when audit trail for every status transition.
 - `documents.uploaded_by` — captures the user who uploaded each document.
 
 A general audit log table is intentionally out of scope. The fields above cover the audit needs of the current business rules without adding the operational burden of a generic change log.

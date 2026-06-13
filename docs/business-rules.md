@@ -20,39 +20,28 @@ The platform has two authenticated roles and one unauthenticated entity type.
 
 ## Provider Onboarding Flow
 
-The platform follows an **admin-onboarding** model. Provider companies do not register themselves through the API; instead, administrators create provider records on their behalf, based on commercial agreements established outside the system.
+The platform follows a **self-registration** model. Provider companies register themselves through the public API endpoint; administrators validate the submitted data and approve the provider for operation.
 
 The flow is:
 
-1. An administrator collects the provider's company data (corporate name, tax ID, country, contact information, address) and the representative's email through an external channel.
+1. A provider representative submits company data and their own account credentials via `POST /providers`. The backend orchestrates three operations as a coordinated unit:
+   - Creates the `ServiceProvider` record with `status = pending`.
+   - Creates the Firebase Authentication account for the representative using the Admin SDK, with the password provided in the request body.
+   - Creates the local `User` record with role `provider`, linked to the new `ServiceProvider`.
 
-2. The administrator creates the provider via `POST /providers`. The backend orchestrates four operations as a coordinated unit:
-   - Creates the `ServiceProvider` record with `status = pending` and `created_by` set to the administrator user id.
-   - Creates the Firebase Authentication account for the representative using the Admin SDK (`admin.auth().createUser({ email, displayName })`). The account is created **without a password** — the representative will define one in the next step.
-   - Creates the local `User` record with the `firebase_uid` returned by Firebase, role `provider`, and `service_provider_id` linked to the new provider.
-   - Generates a password setup link via `admin.auth().generatePasswordResetLink(email)` and returns it as `passwordSetupLink` in the response body, alongside the created `provider` and `user` objects.
+   Because Firebase and Postgres cannot share a transaction, the orchestration uses a saga-style compensating action: if the database transaction fails after the Firebase user is created, the Firebase user is deleted before the error response is returned.
 
-   Because Firebase Authentication and Postgres cannot share a transaction, the orchestration uses a saga-style compensating action: if the database transaction fails after the Firebase user is created, the Firebase user is deleted (`admin.auth().deleteUser`) before the error response is returned. This pattern is documented in `architecture.md`.
+2. The representative authenticates via `POST /login` using the credentials they submitted in step 1. They receive a Firebase ID token for subsequent API calls.
 
-3. The administrator delivers the password setup link to the representative through an external channel — email, messaging app, or any preferred medium. **Email delivery is intentionally out of scope** for this system; the backend returns the link in the API response and the administrator forwards it manually. This decision is documented in `architecture.md`.
+3. The provider populates operational data: employees, vehicles, and required compliance documents. All these resources are scoped to their own `ServiceProvider`.
 
-4. The representative opens the link, defines a password on the Firebase-hosted page, and signs in with their email and the password they just defined. They obtain a Firebase ID token from the client SDK and use it as the `Authorization: Bearer <token>` header for all subsequent API calls. The local `User` record already exists and is already linked to the `ServiceProvider`; no additional sync is needed.
+4. When the provider considers their data complete, they signal readiness for review via `POST /providers/me/submit`. The `ServiceProvider` status transitions from `pending` to `pending_review`. While in `pending_review`, the provider data becomes read-only.
 
-5. The administrator reviews the provider's submitted documents and transitions the status from `pending` to `approved` via `POST /providers/:id/approve` (recording `approved_at` and `approved_by`).
+5. The administrator reviews the provider's data and computes compliance via `GET /providers/:id/compliance`. Based on the compliance result:
+   - If compliance is passing, the admin approves via `POST /providers/:id/approve`. The `ServiceProvider` transitions to `approved` status.
+   - If compliance is failing or the data is otherwise insufficient, the admin rejects via `POST /providers/:id/reject` (optionally with a reason). The `ServiceProvider` transitions back to `pending`; the provider can edit and resubmit.
 
-6. The approved provider operates the system within its scoped permissions.
-
-**Self-registration is explicitly out of scope.** This decision keeps the model simpler (no email verification flows, no anti-fraud measures, no intermediate states where a `User` exists without a `ServiceProvider`) and reflects a realistic B2B scenario where contractor relationships are established before system access is granted.
-
-As a consequence, the `created_by` audit field on `ServiceProvider` is always populated and always refers to an administrator.
-
-### Regenerating the Password Setup Link
-
-The default Firebase expiration for password setup links is one hour. If the representative does not complete the setup in time, or if the link is lost in transit, an administrator can regenerate it via `POST /providers/:id/regenerate-invite`. The endpoint generates a new link for the linked `User` and returns it in the response body.
-
-The same endpoint also serves as an admin-triggered password reset for representatives who have already set their password but lost access. The Firebase API used (`generatePasswordResetLink`) behaves identically for first-time setup and subsequent resets; the page the representative sees prompts them to define a new password either way.
-
-Rate limiting on this endpoint and revocation of existing sessions (`admin.auth().revokeRefreshTokens`) are intentionally out of scope for the current implementation. Both can be added later without architectural change.
+6. The approved provider operates within scoped permissions. They can manage their employees, vehicles, and documents, but cannot modify the corporate identification fields (`corporateName`, `taxId`, `country`) set during registration — those are treated as contractual data.
 
 ## Entities and Relationships
 
@@ -104,7 +93,7 @@ A document is always linked to a `service_provider_id`. Depending on its `docume
 
 ### BR005 — Authentication Requirement
 
-All endpoints except `POST /auth/login` and the health check require a valid Firebase ID token in the `Authorization` header. Missing or invalid tokens return HTTP 401.
+All endpoints except `POST /login`, `POST /providers` (self-registration), and the health check require a valid Firebase ID token in the `Authorization` header. Missing or invalid tokens return HTTP 401.
 
 ### BR006 — Provider Scope Restriction
 
@@ -120,17 +109,21 @@ Authenticated administrators can access and modify every resource in the system.
 
 A provider is one of:
 
-- **`pending`** — initial state when a provider is created. Cannot operate; visible only to administrators.
-- **`approved`** — active state. The provider can be assigned services. Records `approved_at` and `approved_by`.
-- **`inactive`** — soft-deleted state. Records remain in the database; provider cannot operate. Records `status_changed_at` and `status_changed_by`.
+- **`pending`** — initial state after self-registration. Provider can edit data and add employees, vehicles, and documents.
+- **`pending_review`** — provider signaled readiness via submit. Read-only while awaiting admin decision.
+- **`approved`** — admin approved after compliance passing. Provider can manage operational data but cannot modify corporate identification fields (`corporateName`, `taxId`, `country`).
+- **`inactive`** — soft-deleted state. Records remain queryable; provider cannot operate.
 
 Valid transitions:
 
-- `pending → approved` (admin action)
-- `pending → inactive` (admin action, rejection equivalent)
-- `approved → inactive` (admin action, deactivation)
+- `pending → pending_review` (provider submits via `POST /providers/me/submit`)
+- `pending_review → pending` (admin rejects via `POST /providers/:id/reject`)
+- `pending_review → approved` (admin approves via `POST /providers/:id/approve`, gated by compliance passing)
+- `pending → inactive` (admin deactivates)
+- `pending_review → inactive` (admin deactivates)
+- `approved → inactive` (admin deactivates)
 
-Every status transition records `status_changed_at` (timestamp) and `status_changed_by` (admin user id) on the provider. For `pending → approved`, `approved_at` and `approved_by` are additionally recorded as a permanent marker of the approval event.
+Every status transition records `status_changed_at` (timestamp) and `status_changed_by` (user id) on the provider. For `pending_review → approved`, `approved_at` and `approved_by` are additionally recorded as a permanent marker of the approval event. Provider approval requires the compliance check to be in passing state; otherwise the approve endpoint returns HTTP 422 with the compliance details.
 
 ### Employee and Vehicle Status
 
@@ -163,13 +156,13 @@ When a new document of the same type is uploaded for the same entity, the previo
 
 ### Document Type to Entity Mapping
 
-| Document Type           | Owner Entity      | Expires |
-| ----------------------- | ----------------- | ------- |
-| `tax_id`                | ServiceProvider   | No      |
-| `government_id`         | Employee          | Optional|
-| `driver_license`        | Employee          | Yes     |
-| `employment_contract`   | Employee          | Optional|
-| `vehicle_registration`  | Vehicle           | Yes     |
+| Document Type           | Owner Entity      | Expires  |
+| ----------------------- | ----------------- | -------- |
+| `tax_id`                | ServiceProvider   | No       |
+| `government_id`         | Employee          | Optional |
+| `driver_license`        | Employee          | Yes      |
+| `employment_contract`   | Employee          | Optional |
+| `vehicle_registration`  | Vehicle           | Yes      |
 
 ### Document Expiration
 
@@ -196,18 +189,26 @@ The compliance status is computed on demand by the endpoint `GET /providers/:id/
 
 Compliance is computed in real time; it is not stored as a column on the provider. The single exception is that the daily job marks documents as `expired`, which affects subsequent compliance computations.
 
+Compliance functions as both an informational endpoint and a gate for provider approval. The `POST /providers/:id/approve` endpoint checks compliance internally and returns HTTP 422 with the compliance details if the provider is not compliant. This ensures no provider is approved while missing required documents or carrying expired ones.
+
 ## Permission Rules
 
-| Action                                | Admin | Provider (own resources) | Provider (other resources) |
-| ------------------------------------- | :---: | :----------------------: | :------------------------: |
-| List all providers                    |   ✓   |            ✗             |              ✗             |
-| Read own provider                     |   ✓   |            ✓             |              ✗             |
-| Create provider                       |   ✓   |            ✗             |              ✗             |
-| Approve / deactivate provider         |   ✓   |            ✗             |              ✗             |
-| Manage employees                      |   ✓   |            ✓             |              ✗             |
-| Manage vehicles                       |   ✓   |            ✓             |              ✗             |
-| Upload documents                      |   ✓   |            ✓             |              ✗             |
-| View compliance status                |   ✓   |            ✓             |              ✗             |
+| Action                                                  | Admin | Provider (own) | Provider (other) |
+| ------------------------------------------------------- | :---: | :------------: | :--------------: |
+| Create provider (self-registration)                     |   ✓   |       ✓        |        ✓         |
+| List all providers                                      |   ✓   |       ✗        |        ✗         |
+| Read own provider                                       |   ✓   |       ✓        |        ✗         |
+| Submit provider for review                              |   ✗   |       ✓        |        ✗         |
+| Reject provider                                        |   ✓   |       ✗        |        ✗         |
+| Approve provider (gated by compliance)                  |   ✓   |       ✗        |        ✗         |
+| Deactivate provider                                     |   ✓   |       ✗        |        ✗         |
+| Modify corporate identification after registration      |   ✓   |       ✗        |        ✗         |
+| Manage employees                                        |   ✓   |       ✓        |        ✗         |
+| Manage vehicles                                         |   ✓   |       ✓        |        ✗         |
+| Upload documents                                        |   ✓   |       ✓        |        ✗         |
+| View compliance status                                  |   ✓   |       ✓        |        ✗         |
+
+Provider self-registration (`POST /providers`) is a public endpoint; no authentication is required.
 
 All write operations on a provider, employee, vehicle, or document are scoped to the authenticated provider's own `service_provider_id`. Administrators bypass this scope.
 
