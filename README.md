@@ -4,10 +4,13 @@ A backend service for managing outsourced service providers, their employees, ve
 
 This project is built as a portfolio demonstration of backend development at the junior-advanced to mid-level range, with realistic business rules and modern tooling. It is **not** intended to be an ambitious distributed system; it is intended to be a clean, focused, well-documented backend.
 
+**Live deployment:** https://service-provider-api-wvmh.onrender.com
+
 ## Features
 
 - Firebase Authentication for identity, with token verification on the API.
 - Role-based access (`admin`, `provider`) with strict per-provider data scoping.
+- Provider self-registration with admin review and compliance-gated approval.
 - CRUD for providers, employees, vehicles, and documents.
 - Direct file upload to AWS S3, with metadata persisted in PostgreSQL.
 - Compliance computation per provider, including missing, expired, and soon-to-expire documents.
@@ -54,6 +57,10 @@ This project is built as a portfolio demonstration of backend development at the
 │   ├── architecture.md      # Technical decisions and rationale
 │   ├── business-rules.md    # Domain model and validation rules
 │   └── database-model.md    # Schema, ERD, and constraints
+├── postman/
+│   ├── collection.json
+│   ├── environment.local.json
+│   └── environment.production.json
 ├── tests/
 ├── docker-compose.yml
 ├── Dockerfile
@@ -66,7 +73,85 @@ This project is built as a portfolio demonstration of backend development at the
 └── README.md
 ```
 
-## Quick Start
+## Trying the API
+
+The fastest way to exercise the API is the live deployment. No local setup is required.
+
+**Live deployment:** https://service-provider-api-wvmh.onrender.com
+
+### Postman collection (recommended)
+
+A ready-to-use Postman collection is committed under `postman/`, with environments for both the live deployment and local development. To use it:
+
+1. Open Postman and click **Import** (top-left).
+2. Drag the three files from the `postman/` folder into the import dialog: `collection.json`, `environment.local.json`, `environment.production.json`. Confirm the import.
+3. In the environment selector (top-right of Postman), choose **Service Provider API — Production**.
+4. Click the eye icon next to the environment selector and fill in `admin_password` with the value from *Demo credentials* below. Use the **Current Value** column, not Initial Value.
+5. Open the **Auth → Login** request and click **Send**. The response includes a Firebase ID token; a test script attached to this request automatically saves it to the `id_token` environment variable.
+6. Open any other request (for example, **Providers → List Providers**) and click **Send**. The `{{id_token}}` placeholder in the Authorization header is interpolated automatically.
+
+### Demo credentials
+
+An administrator user is seeded on every deployment:
+
+- Email: `admin@admin.com`
+- Password: `Admin123`
+
+These credentials are intentionally public; the API is portfolio-facing and the deployed instance is not used to store meaningful data.
+
+To exercise the provider onboarding flow end-to-end, you can also self-register a new provider via `POST /providers` (no authentication required) and log in with the credentials you submitted.
+
+### Cold start
+
+The deployment runs on Render's free tier, which spins the service down after 15 minutes of inactivity. The first request after spin-down takes about 30 to 60 seconds; subsequent requests respond in normal latency. This is expected behavior for the free tier and is not a bug.
+
+### Using curl
+
+If you prefer not to use Postman, all endpoints can be exercised with curl. Example login:
+
+```bash
+curl -X POST https://service-provider-api-wvmh.onrender.com/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@admin.com","password":"Admin123"}'
+```
+
+The response contains an `idToken` field; pass it as `Authorization: Bearer <idToken>` in subsequent requests.
+
+## API Documentation
+
+### Endpoints
+
+```
+Auth
+POST   /login                                   public
+
+Providers
+POST   /providers                               public — self-registration
+GET    /providers                               admin only
+GET    /providers/:id                           admin or own provider
+POST   /providers/me/submit                     provider only — submit for review
+POST   /providers/:id/approve                   admin only — gated by compliance
+POST   /providers/:id/reject                    admin only — back to pending
+POST   /providers/:id/deactivate                admin only
+GET    /providers/:id/compliance                admin or own provider
+
+Employees, Vehicles, Documents
+CRUD scoped to provider's own resources; admin sees all
+```
+
+Except `POST /login` and `POST /providers`, all endpoints require a valid Firebase ID token in the `Authorization` header. List endpoints support pagination via `?page=1&limit=20` and resource-appropriate filtering (`?status=approved`, `?country=BR`, `?document_type=driver_license`).
+
+**Provider self-registration:** `POST /providers` is a public endpoint. The representative submits company data and account credentials in a single request; the backend creates the Firebase Authentication account and the local user record atomically. See [docs/business-rules.md](docs/business-rules.md) for the full onboarding flow and [docs/architecture.md](docs/architecture.md) for the design rationale.
+
+### Interactive documentation
+
+OpenAPI (Swagger) is generated from JSDoc annotations in the route and controller files. The interactive UI is served at `/docs` when the server is running (non-production environments). Full request and response schemas, including the standardized error format, are documented there.
+
+For the error response shape, pagination envelope, and permission model in detail, see [docs/architecture.md](docs/architecture.md) and [docs/business-rules.md](docs/business-rules.md).
+
+## Local Development
+
+If you want to run the API on your machine — to inspect the source, run tests, or develop against a local instance — follow these steps. The live deployment described in *Trying the API* is the recommended path for evaluators; this section is for developers cloning the repository.
 
 ### Prerequisites
 
@@ -130,6 +215,7 @@ npm run dev
 | `FIREBASE_PROJECT_ID`        | Firebase project ID                              |
 | `FIREBASE_CLIENT_EMAIL`      | Firebase service account email                   |
 | `FIREBASE_PRIVATE_KEY`       | Firebase service account private key             |
+| `FIREBASE_WEB_API_KEY`       | Firebase Web API Key, used by `POST /login` to proxy Firebase REST sign-in |
 | `AWS_ACCESS_KEY_ID`          | AWS IAM access key                               |
 | `AWS_SECRET_ACCESS_KEY`      | AWS IAM secret                                   |
 | `AWS_REGION`                 | S3 region                                        |
@@ -137,81 +223,6 @@ npm run dev
 | `SENTRY_DSN`                 | Sentry DSN (optional in development)             |
 
 A complete template is in `.env.example`. The application validates required variables at startup and fails fast if any are missing.
-
-## API Documentation
-
-### Endpoints
-
-```
-Auth
-POST   /login                                   public
-
-Providers
-POST   /providers                               public — self-registration
-GET    /providers                               admin only
-GET    /providers/:id                           admin or own provider
-POST   /providers/me/submit                     provider only — submit for review
-POST   /providers/:id/approve                   admin only — gated by compliance
-POST   /providers/:id/reject                    admin only — back to pending
-POST   /providers/:id/deactivate                admin only
-GET    /providers/:id/compliance                admin or own provider
-
-Employees, Vehicles, Documents
-CRUD scoped to provider's own resources; admin sees all
-```
-
-Except `POST /login` and `POST /providers`, all endpoints require a valid Firebase ID token in the `Authorization` header. List endpoints support pagination via `?page=1&limit=20` and resource-appropriate filtering (`?status=approved`, `?country=BR`, `?document_type=driver_license`).
-
-**Provider self-registration:** `POST /providers` is a public endpoint. The representative submits company data and account credentials in a single request; the backend creates the Firebase Authentication account and the local user record atomically. See [docs/business-rules.md](docs/business-rules.md) for the full onboarding flow and [docs/architecture.md](docs/architecture.md) for the design rationale.
-
-### Interactive documentation
-
-OpenAPI (Swagger) is generated from JSDoc annotations in the route and controller files. The interactive UI is served at `/docs` when the server is running (non-production environments). Full request and response schemas, including the standardized error format, are documented there.
-
-For the error response shape, pagination envelope, and permission model in detail, see [docs/architecture.md](docs/architecture.md) and [docs/business-rules.md](docs/business-rules.md).
-
-## Demo Access
-
-This API is deployed for live demonstration. The seed data includes pre-created demo accounts so you can authenticate and exercise the endpoints immediately, without running the system locally.
-
-**Demo administrator**
-
-- Email: `admin@demo.com`
-- Password: `DemoAdmin123!`
-
-**Demo provider**
-
-- Email: `provider@demo.com`
-- Password: `DemoProvider123!`
-
-### Obtaining a Firebase ID token
-
-The API verifies Firebase ID tokens but does not issue them — authentication runs entirely through Firebase. To obtain a token for the demo accounts, call the Firebase Authentication REST API directly:
-
-```bash
-curl -X POST \
-  "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=FIREBASE_WEB_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "admin@demo.com",
-    "password": "DemoAdmin123!",
-    "returnSecureToken": true
-  }'
-```
-
-The Firebase Web API Key for this project will be published here after deployment. Firebase Web API Keys are intentionally public — they identify the project but do not grant access.
-
-The response includes an `idToken`. Use it in the `Authorization: Bearer <idToken>` header for subsequent API requests. The token expires in 1 hour; the response also includes a `refreshToken` you can exchange for a new ID token if needed.
-
-You can also paste the token directly into Swagger UI (`/docs`) by clicking *Authorize* and entering `Bearer <idToken>`.
-
-### Demo reset
-
-This is a demo environment. **All non-seed data is automatically reset every 24 hours** by a scheduled job that runs at 04:00 UTC. Any providers, employees, vehicles, or documents you create during testing will be removed by the next reset. Do not store anything meaningful in this instance.
-
-The seed admin and provider accounts (and their Firebase users) persist through resets, so the credentials above remain valid indefinitely.
-
-The Firebase project and S3 bucket used by this deployment are dedicated to the demo and isolated from any production resources.
 
 ## Testing
 
@@ -224,6 +235,8 @@ npm test
 Tests target tax ID validation per country, compliance computation, status transitions, document expiration logic, and the polymorphic document linkage rules.
 
 ## Deployment
+
+This project is currently deployed at https://service-provider-api-wvmh.onrender.com (see *Trying the API* above). The steps below describe how to deploy your own instance if you want to fork and host this project.
 
 The project is configured to deploy on **Render** for the API container and **Neon** for the PostgreSQL database. This combination provides a permanent free tier suitable for portfolio and demo purposes, with no credit card required for either service.
 
@@ -250,17 +263,7 @@ Using an external database provider also reflects a realistic production pattern
    - All `FIREBASE_*` variables from your Firebase service account
    - All `AWS_*` variables for the S3 bucket
    - `SENTRY_DSN` if Sentry is enabled
-5. Deploy. Render builds the Docker image and starts the container. The API will be available at `https://<service-name>.onrender.com`.
-
-### Step 3 — Run migrations
-
-After the first deploy, run migrations against the Neon database. The simplest path is from your local machine, pointing at the production `DATABASE_URL`:
-
-```bash
-DATABASE_URL="<neon connection string>" npx sequelize-cli db:migrate
-```
-
-Seeders can be run the same way if demo data is desired.
+5. Deploy. Render builds the Docker image and starts the container. Pending migrations and seeders run automatically on startup. The API will be available at `https://<service-name>.onrender.com`.
 
 ### Caveats
 
