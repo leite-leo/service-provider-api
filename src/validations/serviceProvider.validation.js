@@ -14,16 +14,15 @@ const paginationQuery = z.object({
   query: z.object({
     page:    z.coerce.number().int().min(1).optional(),
     limit:   z.coerce.number().int().min(1).max(100).optional(),
-    status:  z.enum(['pending', 'approved', 'inactive']).optional(),
+    status:  z.enum(['pending', 'pending_review', 'approved', 'inactive']).optional(),
     country: z.enum(SUPPORTED_COUNTRIES).optional(),
   }),
 });
 
-const list   = paginationQuery;
-const show   = providerParams;
-const approve          = providerParams;
-const deactivate       = providerParams;
-const regenerateInvite = providerParams;
+const list       = paginationQuery;
+const show       = providerParams;
+const approve    = providerParams;
+const deactivate = providerParams;
 
 const create = z.object({
   body: z.object({
@@ -37,7 +36,19 @@ const create = z.object({
     state:              z.string().min(1),
     postalCode:         z.string().min(1),
     representativeName: z.string().min(1),
+    password:           z.string().min(1),
   }),
 });
 
-module.exports = { list, show, create, approve, deactivate, regenerateInvite };
+const submit = z.object({});
+
+const reject = z.object({
+  params: z.object({
+    id: z.string().uuid(),
+  }),
+  body: z.object({
+    reason: z.string().optional(),
+  }),
+});
+
+module.exports = { list, show, create, approve, deactivate, submit, reject };

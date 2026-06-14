@@ -31,13 +31,14 @@ module.exports = {
 
   async create(req, res, next) {
     try {
-      const { corporateName, taxId, country, phone, email, address,
-        city, state, postalCode, representativeName } = req.body;
-      const result = await serviceProviderService.create(
-        { corporateName, taxId, country, phone, email, address,
-          city, state, postalCode, representativeName },
-        req.user.id,
-      );
+      const {
+        corporateName, taxId, country, phone, email, address,
+        city, state, postalCode, representativeName, password,
+      } = req.body;
+      const result = await serviceProviderService.create({
+        corporateName, taxId, country, phone, email, address,
+        city, state, postalCode, representativeName, password,
+      });
       return res.status(201).json(result);
     } catch (error) {
       return next(error);
@@ -64,10 +65,24 @@ module.exports = {
     }
   },
 
-  async regenerateInvite(req, res, next) {
+  async submit(req, res, next) {
+    try {
+      const providerId = req.user.serviceProviderId;
+      if (!providerId) {
+        throw new ForbiddenError();
+      }
+      const provider = await serviceProviderService.submit(providerId, req.user);
+      return res.status(200).json(provider);
+    } catch (error) {
+      return next(error);
+    }
+  },
+
+  async reject(req, res, next) {
     try {
       const { id } = req.params;
-      const result = await serviceProviderService.regenerateInvite(id);
+      const { reason } = req.body || {};
+      const result = await serviceProviderService.reject(id, req.user.id, reason);
       return res.status(200).json(result);
     } catch (error) {
       return next(error);
