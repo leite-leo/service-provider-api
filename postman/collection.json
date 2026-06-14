@@ -80,20 +80,35 @@
                 { "key": "country", "value": "BR",      "disabled": true }
               ]
             },
-            "description": "Admin only. Returns a paginated list of providers. Optional filters: status (pending | approved | inactive) and country (BR | US | DE | GB | FR)."
+            "description": "Admin only. Returns a paginated list of providers. Optional filters: status (pending | pending_review | approved | inactive) and country (BR | US | DE | GB | FR)."
           }
         },
         {
           "name": "Create Provider",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('provider_id', response.provider.id);",
+                  "    console.log('provider_id saved to environment');",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
+            "auth": { "type": "noauth" },
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{id_token}}" },
-              { "key": "Content-Type",  "value": "application/json" }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"corporateName\": \"Acme Serviços Ltda\",\n  \"taxId\": \"12.345.678/0001-99\",\n  \"country\": \"BR\",\n  \"phone\": \"+55 11 99999-9999\",\n  \"email\": \"contato@acme.com\",\n  \"address\": \"Rua das Flores, 123\",\n  \"city\": \"São Paulo\",\n  \"state\": \"SP\",\n  \"postalCode\": \"01310-100\",\n  \"representativeName\": \"João Silva\"\n}",
+              "raw": "{\n  \"corporateName\": \"Acme Logistics LLC\",\n  \"taxId\": \"12.345.678/0001-99\",\n  \"country\": \"BR\",\n  \"phone\": \"+55 11 99999-9999\",\n  \"email\": \"joao.silva@acme.com\",\n  \"address\": \"Rua das Flores, 123\",\n  \"city\": \"São Paulo\",\n  \"state\": \"SP\",\n  \"postalCode\": \"01310-100\",\n  \"representativeName\": \"João Silva\",\n  \"password\": \"Acme2026\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -101,7 +116,22 @@
               "host": ["{{base_url}}"],
               "path": ["providers"]
             },
-            "description": "Admin only. Creates a provider record, registers the representative as a Firebase user, and returns a password setup link to be delivered to them."
+            "description": "Public endpoint. Self-registration: creates a provider record together with the representative's Firebase Authentication account in a single atomic operation. Returns the created provider and user."
+          }
+        },
+        {
+          "name": "Submit for Review",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{id_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/providers/me/submit",
+              "host": ["{{base_url}}"],
+              "path": ["providers", "me", "submit"]
+            },
+            "description": "Provider only. Signals readiness for admin review. Transitions the authenticated provider from pending to pending_review. Provider data becomes read-only while in review."
           }
         },
         {
@@ -131,7 +161,28 @@
               "host": ["{{base_url}}"],
               "path": ["providers", "{{provider_id}}", "approve"]
             },
-            "description": "Admin only. Transitions a pending provider to approved status."
+            "description": "Admin only. Approves a provider in pending_review status, transitioning it to approved. Compliance gating will be enforced once the compliance endpoint is implemented; for now, the transition is unconditional."
+          }
+        },
+        {
+          "name": "Reject Provider",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{id_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Missing tax_id document. Please upload and resubmit.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/providers/{{provider_id}}/reject",
+              "host": ["{{base_url}}"],
+              "path": ["providers", "{{provider_id}}", "reject"]
+            },
+            "description": "Admin only. Rejects a provider in pending_review status, transitioning it back to pending. Optional 'reason' in body provides feedback to the provider (returned in the response but not persisted in the database)."
           }
         },
         {
@@ -146,22 +197,7 @@
               "host": ["{{base_url}}"],
               "path": ["providers", "{{provider_id}}", "deactivate"]
             },
-            "description": "Admin only. Transitions an approved provider to inactive status."
-          }
-        },
-        {
-          "name": "Regenerate Invite",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{id_token}}" }
-            ],
-            "url": {
-              "raw": "{{base_url}}/providers/{{provider_id}}/regenerate-invite",
-              "host": ["{{base_url}}"],
-              "path": ["providers", "{{provider_id}}", "regenerate-invite"]
-            },
-            "description": "Admin only. Generates a new Firebase password setup link for the provider's representative user and returns it in the response."
+            "description": "Admin only. Deactivates a provider, transitioning to inactive status. Accepts providers in pending, pending_review, or approved states."
           }
         }
       ]
