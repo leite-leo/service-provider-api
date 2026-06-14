@@ -9,14 +9,12 @@ const loginService = require('../services/login.service');
  * arbitrary emails in the Firebase project. In production this would
  * be replaced by rate limiting and CAPTCHA.
  */
-const ALLOWED_LOGIN_EMAILS = ['admin@admin.com'];
 
 module.exports = {
   async login(req, res, next) {
     try {
-      const { email, password } = req.body;
-
-      if (!ALLOWED_LOGIN_EMAILS.includes(email)) {
+      const user = await User.findOne({ where: { email } });
+      if (!user) {
         throw new ForbiddenError('Email not authorized to log in');
       }
 
