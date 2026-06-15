@@ -299,24 +299,25 @@ For a more detailed account of the workflow, see the *Development Methodology* s
 
 ## Roadmap
 
-### MVP
+### Done
 
-- Authentication and user management.
-- Provider, employee, vehicle CRUD with relationships and validation.
-- Standardized error format, pagination, filtering.
+- Authentication and user management
+- Provider CRUD with self-registration, state machine, and approval workflow
+- Employee CRUD with provider-scoped management
+- Standardized error format, pagination, and filtering
+- Sentry error tracking
+- Render deployment with Neon-hosted PostgreSQL
+- Seed data for demo administrator
 
-### v1.1
+### Planned
 
-- Document upload to S3.
-- Compliance computation endpoint.
-- Daily expiration job.
-
-### v1.2
-
-- Swagger documentation.
-- Sentry integration.
-- Deployment to Render with Neon-hosted PostgreSQL.
-- Seed data for demo purposes.
+- Vehicle CRUD (provider-scoped, mirroring employee pattern)
+- Document upload to S3 with polymorphic linkage (provider/employee/vehicle)
+- Compliance computation endpoint
+- Provider approval gating by compliance (currently deferred via TODO)
+- Daily scheduled job to mark expired documents
+- Swagger / OpenAPI interactive documentation
+- Admin write capability for operational sub-resources (design choice intentionally deferred)
 
 ### Explicitly out of scope
 
