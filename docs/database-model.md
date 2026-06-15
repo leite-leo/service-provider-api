@@ -154,7 +154,7 @@ Holds employees linked to providers.
 | `created_at`          | TIMESTAMPTZ | NOT NULL                                       |
 | `updated_at`          | TIMESTAMPTZ | NOT NULL                                       |
 
-A unique constraint on `(service_provider_id, email)` ensures email uniqueness within a provider.
+A unique constraint on `(service_provider_id, email)` ensures email uniqueness within a provider. A second unique constraint on `(service_provider_id, government_id)` prevents the same person from being registered twice under the same provider.
 
 ### `vehicles`
 

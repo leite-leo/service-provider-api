@@ -135,8 +135,15 @@ POST   /providers/:id/reject                    admin only — back to pending
 POST   /providers/:id/deactivate                admin only
 GET    /providers/:id/compliance                admin or own provider
 
-Employees, Vehicles, Documents
-CRUD scoped to provider's own resources; admin sees all
+Employees
+GET    /employees                          admin or own provider
+POST   /employees                          provider only
+GET    /employees/:id                      admin or own provider
+PATCH  /employees/:id                      provider only
+POST   /employees/:id/deactivate           provider only
+
+Vehicles, Documents
+CRUD scoped to provider's own resources; admin sees all (not yet implemented)
 ```
 
 Except `POST /login` and `POST /providers`, all endpoints require a valid Firebase ID token in the `Authorization` header. List endpoints support pagination via `?page=1&limit=20` and resource-appropriate filtering (`?status=approved`, `?country=BR`, `?document_type=driver_license`).

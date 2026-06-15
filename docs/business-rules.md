@@ -12,11 +12,11 @@ The hiring company needs to ensure that every contracted provider remains compli
 
 The platform has two authenticated roles and one unauthenticated entity type.
 
-**Administrator** — has full access to every provider, employee, vehicle, and document in the system. Approves or deactivates providers, monitors compliance across the platform.
+**Administrator** — has full read access to every provider, employee, vehicle, and document in the system. Moderates providers through state transitions (approve, reject, deactivate), modifies corporate identification fields after registration, and monitors compliance across the platform. Operational data (employees, vehicles, documents) is mutated by the provider role.
 
 **Service Provider** — represents a provider company user. Authenticated users in this role can manage only the resources that belong to their own company: their employees, their vehicles, their documents. They cannot see or affect other providers.
 
-**Employee** — represents a worker linked to a provider. Employees are operational records, not platform users. They do not have credentials, do not log in, and do not interact with the API directly. They exist as data managed by providers and administrators.
+**Employee** — represents a worker linked to a provider. Employees are operational records, not platform users. They do not have credentials, do not log in, and do not interact with the API directly. They exist as data managed by the provider they belong to.
 
 ## Provider Onboarding Flow
 
@@ -101,7 +101,7 @@ Authenticated providers can only access records that belong to their own company
 
 ### BR007 — Administrator Scope
 
-Authenticated administrators can access and modify every resource in the system.
+Authenticated administrators can read every resource in the system. Mutation capability is limited to provider entity operations (state transitions and corporate identification edits); employees, vehicles, and documents are mutated by the authenticated provider role.
 
 ## Status Definitions
 
@@ -203,14 +203,15 @@ Compliance functions as both an informational endpoint and a gate for provider a
 | Approve provider (gated by compliance)                  |   ✓   |       ✗        |        ✗         |
 | Deactivate provider                                     |   ✓   |       ✗        |        ✗         |
 | Modify corporate identification after registration      |   ✓   |       ✗        |        ✗         |
-| Manage employees                                        |   ✓   |       ✓        |        ✗         |
+| View employees                                          |   ✓   |       ✓        |        ✗         |
+| Manage employees (create, update, deactivate)           |   ✗   |       ✓        |        ✗         |
 | Manage vehicles                                         |   ✓   |       ✓        |        ✗         |
 | Upload documents                                        |   ✓   |       ✓        |        ✗         |
 | View compliance status                                  |   ✓   |       ✓        |        ✗         |
 
 Provider self-registration (`POST /providers`) is a public endpoint; no authentication is required.
 
-All write operations on a provider, employee, vehicle, or document are scoped to the authenticated provider's own `service_provider_id`. Administrators bypass this scope.
+Write operations on a provider entity (state transitions, corporate identification edits) are admin-only and bypass provider scope. Write operations on operational data (employees, vehicles, documents) are scoped to the authenticated provider's own `service_provider_id` and cannot be performed by admins. This asymmetry is deliberate: admins moderate providers, providers operate on their own data.
 
 ## Soft Delete Policy
 
