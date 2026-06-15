@@ -20,7 +20,7 @@ module.exports = {
       const isAdmin = req.user.role === 'admin';
       const isOwnProvider = req.user.role === 'provider' && req.user.serviceProviderId === id;
       if (!isAdmin && !isOwnProvider) {
-        throw new ForbiddenError();
+        throw new ForbiddenError("Cannot view another provider's record");
       }
       const provider = await serviceProviderService.findById(id);
       return res.status(200).json(provider);
@@ -69,7 +69,7 @@ module.exports = {
     try {
       const providerId = req.user.serviceProviderId;
       if (!providerId) {
-        throw new ForbiddenError();
+        throw new ForbiddenError('User has no associated provider record');
       }
       const provider = await serviceProviderService.submit(providerId, req.user);
       return res.status(200).json(provider);

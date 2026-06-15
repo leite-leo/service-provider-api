@@ -156,7 +156,7 @@ class ServiceProviderService {
       requestingUser.role !== 'provider'
       || requestingUser.serviceProviderId !== providerId
     ) {
-      throw new ForbiddenError();
+      throw new ForbiddenError("Cannot submit another provider's record");
     }
     if (provider.status !== 'pending') {
       throw new ConflictError(`Cannot submit a provider in ${provider.status} state`);
