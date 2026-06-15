@@ -201,6 +201,119 @@
           }
         }
       ]
+    },
+    {
+      "name": "Employees",
+      "item": [
+        {
+          "name": "List Employees",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{id_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employees?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["employees"],
+              "query": [
+                { "key": "page",       "value": "1" },
+                { "key": "limit",      "value": "20" },
+                { "key": "status",     "value": "active",          "disabled": true },
+                { "key": "providerId", "value": "{{provider_id}}", "disabled": true }
+              ]
+            },
+            "description": "Returns paginated employees. Admin sees all (with optional ?providerId filter); provider sees only own employees. Optional filters: status (active | inactive), providerId (admin only), page, limit."
+          }
+        },
+        {
+          "name": "Create Employee",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('employee_id', response.id);",
+                  "    console.log('employee_id saved to environment');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{id_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Maria Souza\",\n  \"governmentId\": \"123.456.789-00\",\n  \"email\": \"maria.souza@acme.com\",\n  \"phone\": \"+55 11 98888-7777\",\n  \"role\": \"Driver\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/employees",
+              "host": ["{{base_url}}"],
+              "path": ["employees"]
+            },
+            "description": "Provider only. Creates a new employee under the authenticated provider. Requires provider status to be 'pending' or 'approved'. Unique constraints: (provider, email) and (provider, government_id) prevent duplicate entries within the same provider scope."
+          }
+        },
+        {
+          "name": "Get Employee",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{id_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employees/{{employee_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["employees", "{{employee_id}}"]
+            },
+            "description": "Returns a single employee. Admins see any employee; providers see only their own. Returns 403 with 'Cannot view another provider's employee' when a provider tries to access an employee outside their scope."
+          }
+        },
+        {
+          "name": "Update Employee",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{id_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+55 11 97777-6666\",\n  \"role\": \"Senior Driver\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/employees/{{employee_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["employees", "{{employee_id}}"]
+            },
+            "description": "Provider only. Partial update — send only the fields to change. Requires provider status 'pending' or 'approved'. Empty body is rejected with 400. Returns 403 when a provider tries to update another provider's employee."
+          }
+        },
+        {
+          "name": "Deactivate Employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{id_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employees/{{employee_id}}/deactivate",
+              "host": ["{{base_url}}"],
+              "path": ["employees", "{{employee_id}}", "deactivate"]
+            },
+            "description": "Provider only. Soft-deletes the employee by setting status to 'inactive'. Requires provider status 'pending' or 'approved'. Returns 409 if the employee is already inactive."
+          }
+        }
+      ]
     }
   ]
 }
