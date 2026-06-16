@@ -3,7 +3,8 @@
 const path = require('path');
 const multer = require('multer');
 const multerS3 = require('multer-s3');
-const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const config = require('./app.config');
 const { ValidationError } = require('../utils/errors.utils');
 
@@ -37,11 +38,13 @@ const upload = multer({
   },
 });
 
-const deleteFileFromS3 = async (fileUrl) => {
-  const baseUrl = `https://${config.s3.bucket}.s3.${config.s3.region}.amazonaws.com/`;
-  const key = fileUrl.replace(baseUrl, '');
-  if (!key || key === fileUrl) throw new ValidationError('Could not extract S3 key from URL');
+const generatePresignedUrl = async (key, ttlSeconds = 900) => {
+  const command = new GetObjectCommand({ Bucket: config.s3.bucket, Key: key });
+  return getSignedUrl(s3, command, { expiresIn: ttlSeconds });
+};
+
+const deleteFileFromS3 = async (key) => {
   await s3.send(new DeleteObjectCommand({ Bucket: config.s3.bucket, Key: key }));
 };
 
-module.exports = { upload, deleteFileFromS3 };
+module.exports = { upload, generatePresignedUrl, deleteFileFromS3 };
