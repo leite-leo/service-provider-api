@@ -314,6 +314,120 @@
           }
         }
       ]
+    },
+    {
+      "name": "Vehicles",
+      "item": [
+        {
+          "name": "List Vehicles",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{id_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/vehicles?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["vehicles"],
+              "query": [
+                { "key": "page",        "value": "1" },
+                { "key": "limit",       "value": "20" },
+                { "key": "status",      "value": "active",          "disabled": true },
+                { "key": "vehicleType", "value": "truck",           "disabled": true },
+                { "key": "providerId",  "value": "{{provider_id}}", "disabled": true }
+              ]
+            },
+            "description": "Returns paginated vehicles. Admin sees all (with optional ?providerId filter); provider sees only own vehicles. Optional filters: status (active | inactive), vehicleType (car | van | truck | motorcycle), providerId (admin only), page, limit."
+          }
+        },
+        {
+          "name": "Create Vehicle",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('vehicle_id', response.id);",
+                  "    console.log('vehicle_id saved to environment');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{id_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vin\": \"1HGCM82633A123456\",\n  \"licensePlate\": \"ABC1D23\",\n  \"make\": \"Honda\",\n  \"model\": \"Civic\",\n  \"vehicleType\": \"car\",\n  \"year\": 2022\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/vehicles",
+              "host": ["{{base_url}}"],
+              "path": ["vehicles"]
+            },
+            "description": "Provider only. Creates a new vehicle under the authenticated provider. Requires provider status to be 'pending' or 'approved'. VIN and license_plate are globally unique across the platform — duplicates from any provider return 409 with DUPLICATE_RESOURCE."
+          }
+        },
+        {
+          "name": "Get Vehicle",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{id_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/vehicles/{{vehicle_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["vehicles", "{{vehicle_id}}"]
+            },
+            "description": "Returns a single vehicle. Admins see any vehicle; providers see only their own. Returns 403 with 'Cannot view another provider's vehicle' when a provider tries to access a vehicle outside their scope."
+          }
+        },
+        {
+          "name": "Update Vehicle",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{id_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"model\": \"Civic Touring\",\n  \"year\": 2023\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/vehicles/{{vehicle_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["vehicles", "{{vehicle_id}}"]
+            },
+            "description": "Provider only. Partial update — send only the fields to change. Requires provider status 'pending' or 'approved'. Empty body is rejected with 400. Returns 403 when a provider tries to update another provider's vehicle. VIN and license_plate global uniqueness applies to updates as well."
+          }
+        },
+        {
+          "name": "Deactivate Vehicle",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{id_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/vehicles/{{vehicle_id}}/deactivate",
+              "host": ["{{base_url}}"],
+              "path": ["vehicles", "{{vehicle_id}}", "deactivate"]
+            },
+            "description": "Provider only. Soft-deletes the vehicle by setting status to 'inactive'. Requires provider status 'pending' or 'approved'. Returns 409 if the vehicle is already inactive."
+          }
+        }
+      ]
     }
   ]
 }
