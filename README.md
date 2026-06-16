@@ -142,7 +142,14 @@ GET    /employees/:id                      admin or own provider
 PATCH  /employees/:id                      provider only
 POST   /employees/:id/deactivate           provider only
 
-Vehicles, Documents
+Vehicles
+GET    /vehicles                          admin (filterable by ?providerId) or own provider
+POST   /vehicles                          provider only
+GET    /vehicles/:id                      admin or own provider
+PATCH  /vehicles/:id                      provider only
+POST   /vehicles/:id/deactivate           provider only
+
+Documents
 CRUD scoped to provider's own resources; admin sees all (not yet implemented)
 ```
 
@@ -304,6 +311,7 @@ For a more detailed account of the workflow, see the *Development Methodology* s
 - Authentication and user management
 - Provider CRUD with self-registration, state machine, and approval workflow
 - Employee CRUD with provider-scoped management
+- Vehicle CRUD with provider-scoped management
 - Standardized error format, pagination, and filtering
 - Sentry error tracking
 - Render deployment with Neon-hosted PostgreSQL
@@ -311,7 +319,6 @@ For a more detailed account of the workflow, see the *Development Methodology* s
 
 ### Planned
 
-- Vehicle CRUD (provider-scoped, mirroring employee pattern)
 - Document upload to S3 with polymorphic linkage (provider/employee/vehicle)
 - Compliance computation endpoint
 - Provider approval gating by compliance (currently deferred via TODO)

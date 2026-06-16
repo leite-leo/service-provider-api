@@ -205,7 +205,8 @@ Compliance functions as both an informational endpoint and a gate for provider a
 | Modify corporate identification after registration      |   ✓   |       ✗        |        ✗         |
 | View employees                                          |   ✓   |       ✓        |        ✗         |
 | Manage employees (create, update, deactivate)           |   ✗   |       ✓        |        ✗         |
-| Manage vehicles                                         |   ✓   |       ✓        |        ✗         |
+| View vehicles                                           |   ✓   |       ✓        |        ✗         |
+| Manage vehicles (create, update, deactivate)            |   ✗   |       ✓        |        ✗         |
 | Upload documents                                        |   ✓   |       ✓        |        ✗         |
 | View compliance status                                  |   ✓   |       ✓        |        ✗         |
 

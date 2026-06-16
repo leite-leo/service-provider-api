@@ -174,6 +174,8 @@ Holds vehicles linked to providers.
 | `created_at`          | TIMESTAMPTZ | NOT NULL                                                     |
 | `updated_at`          | TIMESTAMPTZ | NOT NULL                                                     |
 
+The UNIQUE constraints on `vin` and `license_plate` are global across the platform — the same vehicle identifier cannot be registered under different providers (per BR002.3).
+
 ### `documents`
 
 Holds compliance file metadata. The actual files reside in S3.
