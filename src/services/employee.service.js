@@ -13,6 +13,7 @@ async function ensureProviderCanManageEmployees(providerId) {
   if (!PROVIDER_STATUSES_ALLOWING_MANAGEMENT.includes(provider.status)) {
     throw new ConflictError(
       `Cannot manage employees while provider is in ${provider.status} state`,
+      'ACTION_BLOCKED',
     );
   }
 }
@@ -99,6 +100,7 @@ class EmployeeService {
     if (employee.status !== 'active') {
       throw new ConflictError(
         `Cannot deactivate an employee in ${employee.status} state`,
+        'ACTION_BLOCKED',
       );
     }
 

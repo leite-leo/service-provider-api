@@ -120,7 +120,7 @@ class ServiceProviderService {
   async approve(id, adminUserId) {
     const provider = await this.findById(id);
     if (provider.status !== 'pending_review') {
-      throw new ConflictError(`Cannot approve a provider in ${provider.status} state`);
+      throw new ConflictError(`Cannot approve a provider in ${provider.status} state`, 'ACTION_BLOCKED');
     }
     /*
      * TODO: Once the compliance endpoint is implemented, gate the approval
@@ -140,7 +140,7 @@ class ServiceProviderService {
   async deactivate(id, adminUserId) {
     const provider = await this.findById(id);
     if (!['pending', 'pending_review', 'approved'].includes(provider.status)) {
-      throw new ConflictError(`Cannot deactivate a provider in ${provider.status} state`);
+      throw new ConflictError(`Cannot deactivate a provider in ${provider.status} state`, 'ACTION_BLOCKED');
     }
     const now = new Date();
     provider.status = 'inactive';
@@ -159,7 +159,7 @@ class ServiceProviderService {
       throw new ForbiddenError("Cannot submit another provider's record");
     }
     if (provider.status !== 'pending') {
-      throw new ConflictError(`Cannot submit a provider in ${provider.status} state`);
+      throw new ConflictError(`Cannot submit a provider in ${provider.status} state`, 'ACTION_BLOCKED');
     }
     const now = new Date();
     provider.status = 'pending_review';
@@ -172,7 +172,7 @@ class ServiceProviderService {
   async reject(id, adminUserId, reason) {
     const provider = await this.findById(id);
     if (provider.status !== 'pending_review') {
-      throw new ConflictError(`Cannot reject a provider in ${provider.status} state`);
+      throw new ConflictError(`Cannot reject a provider in ${provider.status} state`, 'ACTION_BLOCKED');
     }
     const now = new Date();
     provider.status = 'pending';

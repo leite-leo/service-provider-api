@@ -26,7 +26,9 @@ class NotFoundError extends AppError {
 }
 
 class ConflictError extends AppError {
-  constructor(message, details) { super(message, 409, 'DUPLICATE_RESOURCE', details); }
+  constructor(message, code = 'DUPLICATE_RESOURCE', details) {
+    super(message, 409, code, details);
+  }
 }
 
 module.exports = { AppError, ValidationError, UnauthorizedError, ForbiddenError, NotFoundError, ConflictError };

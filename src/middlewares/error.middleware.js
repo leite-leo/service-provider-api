@@ -15,7 +15,7 @@ module.exports = (err, req, res, _next) => {
     const field = err.errors?.[0]?.path || 'value';
     return res.status(409).json({
       error: {
-        code: 'CONFLICT',
+        code: 'DUPLICATE_RESOURCE',
         message: `A resource with this ${field} already exists`,
       },
     });
