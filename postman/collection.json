@@ -23,7 +23,7 @@
       "name": "Auth",
       "item": [
         {
-          "name": "Login",
+          "name": "Login Admin",
           "event": [
             {
               "listen": "test",
@@ -33,7 +33,7 @@
                   "var json = pm.response.json();",
                   "if (pm.response.code === 200 && json.idToken) {",
                   "    pm.environment.set('id_token', json.idToken);",
-                  "    console.log('id_token saved to environment');",
+                  "    console.log('id_token saved to environment (admin)');",
                   "}"
                 ]
               }
@@ -54,7 +54,42 @@
               "host": ["{{base_url}}"],
               "path": ["login"]
             },
-            "description": "Authenticates with Firebase and returns a Firebase ID token. The test script automatically saves the token to the `id_token` environment variable."
+            "description": "Authenticates as the seeded administrator using {{admin_password}} from the environment. Saves the Firebase ID token to {{id_token}}. Run this before any admin-only operation (List Providers, Approve/Reject/Deactivate Provider, etc.)."
+          }
+        },
+        {
+          "name": "Login Provider",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (pm.response.code === 200 && json.idToken) {",
+                  "    pm.environment.set('id_token', json.idToken);",
+                  "    console.log('id_token saved to environment (provider)');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"joao.silva@acme.com\",\n  \"password\": \"Acme2026\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/login",
+              "host": ["{{base_url}}"],
+              "path": ["login"]
+            },
+            "description": "Authenticates as the provider seeded by the Create Provider request (joao.silva@acme.com / Acme2026). Saves the Firebase ID token to {{id_token}}. Run Create Provider first if this account doesn't exist in the system yet."
           }
         }
       ]
