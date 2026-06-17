@@ -13,8 +13,12 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/health",
-          "host": ["{{base_url}}"],
-          "path": ["health"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "health"
+          ]
         },
         "description": "Returns 200 if the API is up."
       }
@@ -42,17 +46,28 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"admin@admin.com\",\n  \"password\": \"{{admin_password}}\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/login",
-              "host": ["{{base_url}}"],
-              "path": ["login"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "login"
+              ]
             },
             "description": "Authenticates as the seeded administrator using {{admin_password}} from the environment. Saves the Firebase ID token to {{id_token}}. Run this before any admin-only operation (List Providers, Approve/Reject/Deactivate Provider, etc.)."
           }
@@ -77,17 +92,28 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"joao.silva@acme.com\",\n  \"password\": \"Acme2026\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/login",
-              "host": ["{{base_url}}"],
-              "path": ["login"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "login"
+              ]
             },
             "description": "Authenticates as the provider seeded by the Create Provider request (joao.silva@acme.com / Acme2026). Saves the Firebase ID token to {{id_token}}. Run Create Provider first if this account doesn't exist in the system yet."
           }
@@ -102,17 +128,38 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{id_token}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/providers?page=1&limit=20",
-              "host": ["{{base_url}}"],
-              "path": ["providers"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers"
+              ],
               "query": [
-                { "key": "page",    "value": "1" },
-                { "key": "limit",   "value": "20" },
-                { "key": "status",  "value": "pending", "disabled": true },
-                { "key": "country", "value": "BR",      "disabled": true }
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "disabled": true
+                },
+                {
+                  "key": "country",
+                  "value": "BR",
+                  "disabled": true
+                }
               ]
             },
             "description": "Admin only. Returns a paginated list of providers. Optional filters: status (pending | pending_review | approved | inactive) and country (BR | US | DE | GB | FR)."
@@ -136,20 +183,33 @@
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"corporateName\": \"Acme Logistics LLC\",\n  \"taxId\": \"12.345.678/0001-99\",\n  \"country\": \"BR\",\n  \"phone\": \"+55 11 99999-9999\",\n  \"email\": \"joao.silva@acme.com\",\n  \"address\": \"Rua das Flores, 123\",\n  \"city\": \"São Paulo\",\n  \"state\": \"SP\",\n  \"postalCode\": \"01310-100\",\n  \"representativeName\": \"João Silva\",\n  \"password\": \"Acme2026\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/providers",
-              "host": ["{{base_url}}"],
-              "path": ["providers"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers"
+              ]
             },
             "description": "Public endpoint. Self-registration: creates a provider record together with the representative's Firebase Authentication account in a single atomic operation. Returns the created provider and user."
           }
@@ -159,12 +219,21 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{id_token}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/providers/me/submit",
-              "host": ["{{base_url}}"],
-              "path": ["providers", "me", "submit"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers",
+                "me",
+                "submit"
+              ]
             },
             "description": "Provider only. Signals readiness for admin review. Transitions the authenticated provider from pending to pending_review. Provider data becomes read-only while in review."
           }
@@ -174,12 +243,20 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{id_token}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/providers/{{provider_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["providers", "{{provider_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers",
+                "{{provider_id}}"
+              ]
             },
             "description": "Returns a single provider. Admins see any provider; providers see only their own record."
           }
@@ -189,12 +266,21 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{id_token}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/providers/{{provider_id}}/approve",
-              "host": ["{{base_url}}"],
-              "path": ["providers", "{{provider_id}}", "approve"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers",
+                "{{provider_id}}",
+                "approve"
+              ]
             },
             "description": "Admin only. Approves a provider in pending_review status, transitioning it to approved. Compliance gating will be enforced once the compliance endpoint is implemented; for now, the transition is unconditional."
           }
@@ -204,18 +290,34 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{id_token}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"reason\": \"Missing tax_id document. Please upload and resubmit.\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/providers/{{provider_id}}/reject",
-              "host": ["{{base_url}}"],
-              "path": ["providers", "{{provider_id}}", "reject"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers",
+                "{{provider_id}}",
+                "reject"
+              ]
             },
             "description": "Admin only. Rejects a provider in pending_review status, transitioning it back to pending. Optional 'reason' in body provides feedback to the provider (returned in the response but not persisted in the database)."
           }
@@ -225,14 +327,87 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{id_token}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/providers/{{provider_id}}/deactivate",
-              "host": ["{{base_url}}"],
-              "path": ["providers", "{{provider_id}}", "deactivate"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers",
+                "{{provider_id}}",
+                "deactivate"
+              ]
             },
             "description": "Admin only. Deactivates a provider, transitioning to inactive status. Accepts providers in pending, pending_review, or approved states."
+          }
+        },
+        {
+          "name": "Upload Provider Document",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const data = pm.response.json();",
+                  "if (data?.id) pm.environment.set(\"document_id\", data.id);",
+                  "console.log(\"Uploaded provider document:\", data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/providers/{{provider_id}}/documents?documentType=tax_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers",
+                "{{provider_id}}",
+                "documents"
+              ],
+              "query": [
+                {
+                  "key": "documentType",
+                  "value": "tax_id"
+                },
+                {
+                  "key": "issuedAt",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "expiresAt",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Uploads a document for the authenticated provider. Attach a PDF or image to the `file` field before sending. Only valid documentType for this endpoint is `tax_id`. Run \"Login Provider\" first to populate id_token."
           }
         }
       ]
@@ -245,17 +420,38 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{id_token}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/employees?page=1&limit=20",
-              "host": ["{{base_url}}"],
-              "path": ["employees"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees"
+              ],
               "query": [
-                { "key": "page",       "value": "1" },
-                { "key": "limit",      "value": "20" },
-                { "key": "status",     "value": "active",          "disabled": true },
-                { "key": "providerId", "value": "{{provider_id}}", "disabled": true }
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "status",
+                  "value": "active",
+                  "disabled": true
+                },
+                {
+                  "key": "providerId",
+                  "value": "{{provider_id}}",
+                  "disabled": true
+                }
               ]
             },
             "description": "Returns paginated employees. Admin sees all (with optional ?providerId filter); provider sees only own employees. Optional filters: status (active | inactive), providerId (admin only), page, limit."
@@ -281,18 +477,32 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{id_token}}" },
-              { "key": "Content-Type",  "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Maria Souza\",\n  \"governmentId\": \"123.456.789-00\",\n  \"email\": \"maria.souza@acme.com\",\n  \"phone\": \"+55 11 98888-7777\",\n  \"role\": \"Driver\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/employees",
-              "host": ["{{base_url}}"],
-              "path": ["employees"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees"
+              ]
             },
             "description": "Provider only. Creates a new employee under the authenticated provider. Requires provider status to be 'pending' or 'approved'. Unique constraints: (provider, email) and (provider, government_id) prevent duplicate entries within the same provider scope."
           }
@@ -302,12 +512,20 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{id_token}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/employees/{{employee_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["employees", "{{employee_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees",
+                "{{employee_id}}"
+              ]
             },
             "description": "Returns a single employee. Admins see any employee; providers see only their own. Returns 403 with 'Cannot view another provider's employee' when a provider tries to access an employee outside their scope."
           }
@@ -317,18 +535,33 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{id_token}}" },
-              { "key": "Content-Type",  "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"phone\": \"+55 11 97777-6666\",\n  \"role\": \"Senior Driver\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/employees/{{employee_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["employees", "{{employee_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees",
+                "{{employee_id}}"
+              ]
             },
             "description": "Provider only. Partial update — send only the fields to change. Requires provider status 'pending' or 'approved'. Empty body is rejected with 400. Returns 403 when a provider tries to update another provider's employee."
           }
@@ -338,14 +571,87 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{id_token}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/employees/{{employee_id}}/deactivate",
-              "host": ["{{base_url}}"],
-              "path": ["employees", "{{employee_id}}", "deactivate"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees",
+                "{{employee_id}}",
+                "deactivate"
+              ]
             },
             "description": "Provider only. Soft-deletes the employee by setting status to 'inactive'. Requires provider status 'pending' or 'approved'. Returns 409 if the employee is already inactive."
+          }
+        },
+        {
+          "name": "Upload Employee Document",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const data = pm.response.json();",
+                  "if (data?.id) pm.environment.set(\"document_id\", data.id);",
+                  "console.log(\"Uploaded employee document:\", data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/employees/{{employee_id}}/documents?documentType=government_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees",
+                "{{employee_id}}",
+                "documents"
+              ],
+              "query": [
+                {
+                  "key": "documentType",
+                  "value": "government_id"
+                },
+                {
+                  "key": "issuedAt",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "expiresAt",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Uploads a document for an employee. Attach a PDF or image to the `file` field before sending. Valid documentType values: `government_id`, `driver_license`, `employment_contract`. expiresAt is required when documentType is `driver_license`. Run \"Login Provider\" first to populate id_token."
           }
         }
       ]
@@ -358,18 +664,43 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{id_token}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/vehicles?page=1&limit=20",
-              "host": ["{{base_url}}"],
-              "path": ["vehicles"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vehicles"
+              ],
               "query": [
-                { "key": "page",        "value": "1" },
-                { "key": "limit",       "value": "20" },
-                { "key": "status",      "value": "active",          "disabled": true },
-                { "key": "vehicleType", "value": "truck",           "disabled": true },
-                { "key": "providerId",  "value": "{{provider_id}}", "disabled": true }
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "status",
+                  "value": "active",
+                  "disabled": true
+                },
+                {
+                  "key": "vehicleType",
+                  "value": "truck",
+                  "disabled": true
+                },
+                {
+                  "key": "providerId",
+                  "value": "{{provider_id}}",
+                  "disabled": true
+                }
               ]
             },
             "description": "Returns paginated vehicles. Admin sees all (with optional ?providerId filter); provider sees only own vehicles. Optional filters: status (active | inactive), vehicleType (car | van | truck | motorcycle), providerId (admin only), page, limit."
@@ -395,18 +726,32 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{id_token}}" },
-              { "key": "Content-Type",  "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"vin\": \"1HGCM82633A123456\",\n  \"licensePlate\": \"ABC1D23\",\n  \"make\": \"Honda\",\n  \"model\": \"Civic\",\n  \"vehicleType\": \"car\",\n  \"year\": 2022\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/vehicles",
-              "host": ["{{base_url}}"],
-              "path": ["vehicles"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vehicles"
+              ]
             },
             "description": "Provider only. Creates a new vehicle under the authenticated provider. Requires provider status to be 'pending' or 'approved'. VIN and license_plate are globally unique across the platform — duplicates from any provider return 409 with DUPLICATE_RESOURCE."
           }
@@ -416,12 +761,20 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{id_token}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/vehicles/{{vehicle_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["vehicles", "{{vehicle_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vehicles",
+                "{{vehicle_id}}"
+              ]
             },
             "description": "Returns a single vehicle. Admins see any vehicle; providers see only their own. Returns 403 with 'Cannot view another provider's vehicle' when a provider tries to access a vehicle outside their scope."
           }
@@ -431,18 +784,33 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{id_token}}" },
-              { "key": "Content-Type",  "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"model\": \"Civic Touring\",\n  \"year\": 2023\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/vehicles/{{vehicle_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["vehicles", "{{vehicle_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vehicles",
+                "{{vehicle_id}}"
+              ]
             },
             "description": "Provider only. Partial update — send only the fields to change. Requires provider status 'pending' or 'approved'. Empty body is rejected with 400. Returns 403 when a provider tries to update another provider's vehicle. VIN and license_plate global uniqueness applies to updates as well."
           }
@@ -452,14 +820,87 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{id_token}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/vehicles/{{vehicle_id}}/deactivate",
-              "host": ["{{base_url}}"],
-              "path": ["vehicles", "{{vehicle_id}}", "deactivate"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vehicles",
+                "{{vehicle_id}}",
+                "deactivate"
+              ]
             },
             "description": "Provider only. Soft-deletes the vehicle by setting status to 'inactive'. Requires provider status 'pending' or 'approved'. Returns 409 if the vehicle is already inactive."
+          }
+        },
+        {
+          "name": "Upload Vehicle Document",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const data = pm.response.json();",
+                  "if (data?.id) pm.environment.set(\"document_id\", data.id);",
+                  "console.log(\"Uploaded vehicle document:\", data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/vehicles/{{vehicle_id}}/documents?documentType=vehicle_registration",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vehicles",
+                "{{vehicle_id}}",
+                "documents"
+              ],
+              "query": [
+                {
+                  "key": "documentType",
+                  "value": "vehicle_registration"
+                },
+                {
+                  "key": "issuedAt",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "expiresAt",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Uploads a document for a vehicle. Attach a PDF or image to the `file` field before sending. Only valid documentType for this endpoint is `vehicle_registration`. expiresAt is required for this document type. Run \"Login Provider\" first to populate id_token."
           }
         }
       ]
