@@ -2,6 +2,7 @@
 
 const { Vehicle, ServiceProvider } = require('../models');
 const { NotFoundError, ConflictError, ForbiddenError } = require('../utils/errors.utils');
+const documentService = require('./document.service');
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
@@ -19,10 +20,24 @@ async function ensureProviderCanManageVehicles(providerId) {
 }
 
 class VehicleService {
-  async findById(id) {
+  /*
+   * Internal helper used by mutation methods (update, deactivate)
+   * that need a live Sequelize instance to call .save() on.
+   * The public findById returns a plain enriched object instead.
+   */
+  async _findVehicleRecord(id) {
     const vehicle = await Vehicle.findByPk(id);
     if (!vehicle) throw new NotFoundError('Vehicle not found');
     return vehicle;
+  }
+
+  async findById(id) {
+    const vehicle = await this._findVehicleRecord(id);
+    const documents = await documentService.getActiveDocumentsMap('vehicle', vehicle.id);
+    return {
+      ...vehicle.toJSON(),
+      documents,
+    };
   }
 
   async findAll(
@@ -74,7 +89,7 @@ class VehicleService {
   }
 
   async update(id, data, requestingUser) {
-    const vehicle = await this.findById(id);
+    const vehicle = await this._findVehicleRecord(id);
 
     if (vehicle.serviceProviderId !== requestingUser.serviceProviderId) {
       throw new ForbiddenError("Cannot update another provider's vehicle");
@@ -91,7 +106,7 @@ class VehicleService {
   }
 
   async deactivate(id, requestingUser) {
-    const vehicle = await this.findById(id);
+    const vehicle = await this._findVehicleRecord(id);
 
     if (vehicle.serviceProviderId !== requestingUser.serviceProviderId) {
       throw new ForbiddenError("Cannot deactivate another provider's vehicle");
