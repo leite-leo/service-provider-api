@@ -60,4 +60,52 @@ module.exports = {
       return next(error);
     }
   },
+
+  async listProviderDocuments(req, res, next) {
+    try {
+      const { status, documentType, page, limit } = req.query;
+      const result = await documentService.findAll(
+        { ownerType: 'provider', ownerId: req.params.providerId, status, documentType, page, limit },
+        req.user,
+      );
+      return res.status(200).json(result);
+    } catch (error) {
+      return next(error);
+    }
+  },
+
+  async listEmployeeDocuments(req, res, next) {
+    try {
+      const { status, documentType, page, limit } = req.query;
+      const result = await documentService.findAll(
+        { ownerType: 'employee', ownerId: req.params.employeeId, status, documentType, page, limit },
+        req.user,
+      );
+      return res.status(200).json(result);
+    } catch (error) {
+      return next(error);
+    }
+  },
+
+  async listVehicleDocuments(req, res, next) {
+    try {
+      const { status, documentType, page, limit } = req.query;
+      const result = await documentService.findAll(
+        { ownerType: 'vehicle', ownerId: req.params.vehicleId, status, documentType, page, limit },
+        req.user,
+      );
+      return res.status(200).json(result);
+    } catch (error) {
+      return next(error);
+    }
+  },
+
+  async showDocument(req, res, next) {
+    try {
+      const result = await documentService.findById(req.params.id, req.user);
+      return res.status(200).json(result);
+    } catch (error) {
+      return next(error);
+    }
+  },
 };

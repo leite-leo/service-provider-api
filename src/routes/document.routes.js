@@ -16,4 +16,9 @@ router.post('/providers/:providerId/documents', requireRole('provider'), validat
 router.post('/employees/:employeeId/documents', requireRole('provider'), validateUploadQuery, setUploadContext, uploadMiddleware, controller.uploadEmployeeDocument);
 router.post('/vehicles/:vehicleId/documents',   requireRole('provider'), validateUploadQuery, setUploadContext, uploadMiddleware, controller.uploadVehicleDocument);
 
+router.get('/providers/:providerId/documents', controller.listProviderDocuments);
+router.get('/employees/:employeeId/documents', controller.listEmployeeDocuments);
+router.get('/vehicles/:vehicleId/documents',   controller.listVehicleDocuments);
+router.get('/documents/:id',                   controller.showDocument);
+
 module.exports = router;
