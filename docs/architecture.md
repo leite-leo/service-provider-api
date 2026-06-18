@@ -241,6 +241,8 @@ Each transition endpoint updates the appropriate audit fields (`approved_at` and
 - The S3 key follows a predictable pattern: `documents/{service_provider_id}/{document_type}/{document_id}.{ext}`.
 - Upload is a two-stage process at the controller level: multer-s3 handles the file stream to S3, then the controller persists the document metadata.
 - File validation (MIME type, extension, size) is enforced by multer's fileFilter and limits options before any S3 upload occurs.
+- Document metadata (`documentType`, `issuedAt`, `expiresAt`) is passed as query parameters rather than in the request body. This is because multer intercepts the multipart stream before `express.json()` can parse the body; query parameters are available before the upload begins. The `validateUploadQuery` middleware validates these parameters and runs before multer, so validation failures never reach S3.
+- The single-resource GET endpoints (`GET /providers/:id`, `GET /employees/:id`, `GET /vehicles/:id`) include a `documents` map of active documents keyed by type. The enrichment uses multiple sequential queries rather than Sequelize `include`, which keeps each fetch explicit and avoids the N+1 issues that come with nested eager loading when presigned URLs must be generated per document.
 
 ## API Conventions
 
@@ -273,7 +275,7 @@ Offset-based pagination was chosen over cursor-based because the dataset is smal
 
 ### Filtering
 
-List endpoints accept resource-appropriate filter parameters: `?status=approved`, `?country=BR` on providers; `?status=active` on employees and vehicles; `?document_type=driver_license&status=expired` on documents. Filters are validated and combine with `AND` semantics.
+List endpoints accept resource-appropriate filter parameters: `?status=approved`, `?country=BR` on providers; `?status=active` on employees and vehicles; `?documentType=driver_license&status=expired` on documents. Filters are validated and combine with `AND` semantics.
 
 ### Error Response Format
 

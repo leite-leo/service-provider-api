@@ -207,7 +207,8 @@ Compliance functions as both an informational endpoint and a gate for provider a
 | Manage employees (create, update, deactivate)           |   ✗   |       ✓        |        ✗         |
 | View vehicles                                           |   ✓   |       ✓        |        ✗         |
 | Manage vehicles (create, update, deactivate)            |   ✗   |       ✓        |        ✗         |
-| Upload documents                                        |   ✓   |       ✓        |        ✗         |
+| View documents                                          |   ✓   |       ✓        |        ✗         |
+| Upload documents                                        |   ✗   |       ✓        |        ✗         |
 | View compliance status                                  |   ✓   |       ✓        |        ✗         |
 
 Provider self-registration (`POST /providers`) is a public endpoint; no authentication is required.

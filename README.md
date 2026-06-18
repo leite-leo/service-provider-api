@@ -149,11 +149,17 @@ GET    /vehicles/:id                      admin or own provider
 PATCH  /vehicles/:id                      provider only
 POST   /vehicles/:id/deactivate           provider only
 
-Documents
-CRUD scoped to provider's own resources; admin sees all (not yet implemented)
+Documents — nested under owner, or flat by UUID
+POST   /providers/:id/documents                  provider only — upload (query: documentType, issuedAt, expiresAt)
+GET    /providers/:id/documents                  admin or own provider
+POST   /employees/:id/documents                  provider only — upload
+GET    /employees/:id/documents                  admin or own provider
+POST   /vehicles/:id/documents                   provider only — upload
+GET    /vehicles/:id/documents                   admin or own provider
+GET    /documents/:id                            admin or own provider — returns fresh presigned URL
 ```
 
-Except `POST /login` and `POST /providers`, all endpoints require a valid Firebase ID token in the `Authorization` header. List endpoints support pagination via `?page=1&limit=20` and resource-appropriate filtering (`?status=approved`, `?country=BR`, `?document_type=driver_license`).
+Except `POST /login` and `POST /providers`, all endpoints require a valid Firebase ID token in the `Authorization` header. List endpoints support pagination via `?page=1&limit=20` and resource-appropriate filtering (`?status=approved`, `?country=BR`, `?documentType=driver_license`).
 
 **Provider self-registration:** `POST /providers` is a public endpoint. The representative submits company data and account credentials in a single request; the backend creates the Firebase Authentication account and the local user record atomically. See [docs/business-rules.md](docs/business-rules.md) for the full onboarding flow and [docs/architecture.md](docs/architecture.md) for the design rationale.
 
@@ -316,10 +322,9 @@ For a more detailed account of the workflow, see the *Development Methodology* s
 - Sentry error tracking
 - Render deployment with Neon-hosted PostgreSQL
 - Seed data for demo administrator
+- Document CRUD with polymorphic linkage, S3 storage with presigned URLs, and enriched single-resource GET responses
 
 ### Planned
-
-- Document upload to S3 with polymorphic linkage (provider/employee/vehicle)
 - Compliance computation endpoint
 - Provider approval gating by compliance (currently deferred via TODO)
 - Daily scheduled job to mark expired documents
