@@ -36,7 +36,7 @@ class ServiceProviderService {
         page,
         limit: safeLimit,
         total: count,
-        total_pages: Math.ceil(count / safeLimit),
+        totalPages: Math.ceil(count / safeLimit),
       },
     };
   }

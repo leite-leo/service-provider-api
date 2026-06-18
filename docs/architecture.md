@@ -264,7 +264,7 @@ The response envelope is consistent:
     "page": 1,
     "limit": 20,
     "total": 142,
-    "total_pages": 8
+    "totalPages": 8
   }
 }
 ```

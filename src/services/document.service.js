@@ -5,6 +5,8 @@ const { Document, Employee, Vehicle, ServiceProvider, sequelize } = require('../
 const { generatePresignedUrl, deleteFileFromS3 } = require('../config/s3.config');
 const { NotFoundError, ConflictError, ForbiddenError } = require('../utils/errors.utils');
 
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 100;
 const PROVIDER_STATUSES_ALLOWING_UPLOAD = ['pending', 'approved'];
 
 async function ensureProviderCanUploadDocument(providerId) {
@@ -18,7 +20,94 @@ async function ensureProviderCanUploadDocument(providerId) {
   }
 }
 
+async function serializeDocument(doc) {
+  const presignedUrl = await generatePresignedUrl(doc.fileUrl);
+  return {
+    id: doc.id,
+    documentType: doc.documentType,
+    fileUrl: presignedUrl,
+    status: doc.status,
+    issuedAt: doc.issuedAt,
+    expiresAt: doc.expiresAt,
+    uploadedBy: doc.uploadedBy,
+    createdAt: doc.createdAt,
+    updatedAt: doc.updatedAt,
+  };
+}
+
 class DocumentService {
+  async findById(id, requestingUser) {
+    const doc = await Document.findByPk(id);
+    if (!doc) throw new NotFoundError('Document not found');
+    if (requestingUser.role !== 'admin' && doc.serviceProviderId !== requestingUser.serviceProviderId) {
+      throw new ForbiddenError("Cannot view another provider's document");
+    }
+    return serializeDocument(doc);
+  }
+
+  async findAll(
+    { ownerType, ownerId, status, documentType, page = 1, limit = DEFAULT_PAGE_SIZE } = {},
+    requestingUser,
+  ) {
+    const safeLimit = Math.min(limit, MAX_PAGE_SIZE);
+    const offset = (page - 1) * safeLimit;
+
+    // Owner existence check + scoped access control
+    if (ownerType === 'provider') {
+      const provider = await ServiceProvider.findByPk(ownerId);
+      if (!provider) throw new NotFoundError('Service provider not found');
+      if (requestingUser.role !== 'admin' && requestingUser.serviceProviderId !== ownerId) {
+        throw new ForbiddenError("Cannot view another provider's documents");
+      }
+    } else if (ownerType === 'employee') {
+      const employee = await Employee.findByPk(ownerId);
+      if (!employee) throw new NotFoundError('Employee not found');
+      if (requestingUser.role !== 'admin' && requestingUser.serviceProviderId !== employee.serviceProviderId) {
+        throw new ForbiddenError("Cannot view documents for another provider's employee");
+      }
+    } else if (ownerType === 'vehicle') {
+      const vehicle = await Vehicle.findByPk(ownerId);
+      if (!vehicle) throw new NotFoundError('Vehicle not found');
+      if (requestingUser.role !== 'admin' && requestingUser.serviceProviderId !== vehicle.serviceProviderId) {
+        throw new ForbiddenError("Cannot view documents for another provider's vehicle");
+      }
+    }
+
+    const where = {};
+    if (ownerType === 'provider') {
+      where.serviceProviderId = ownerId;
+      where.employeeId = null;
+      where.vehicleId = null;
+    } else if (ownerType === 'employee') {
+      where.employeeId = ownerId;
+    } else {
+      where.vehicleId = ownerId;
+    }
+
+    if (status) where.status = status;
+    if (documentType) where.documentType = documentType;
+
+    const { count, rows } = await Document.findAndCountAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      limit: safeLimit,
+      offset,
+    });
+
+    // Generate presigned URLs for all documents in parallel
+    const data = await Promise.all(rows.map(serializeDocument));
+
+    return {
+      data,
+      pagination: {
+        page,
+        limit: safeLimit,
+        total: count,
+        totalPages: Math.ceil(count / safeLimit),
+      },
+    };
+  }
+
   async uploadDocument({ ownerType, ownerId, providerId, documentType, fileKey, issuedAt, expiresAt, uploadedBy }) {
     try {
       await ensureProviderCanUploadDocument(providerId);
@@ -82,19 +171,7 @@ class DocumentService {
         );
       });
 
-      const presignedUrl = await generatePresignedUrl(doc.fileUrl);
-
-      return {
-        id: doc.id,
-        documentType: doc.documentType,
-        fileUrl: presignedUrl,
-        status: doc.status,
-        issuedAt: doc.issuedAt,
-        expiresAt: doc.expiresAt,
-        uploadedBy: doc.uploadedBy,
-        createdAt: doc.createdAt,
-        updatedAt: doc.updatedAt,
-      };
+      return serializeDocument(doc);
     } catch (err) {
       // Fire-and-forget S3 cleanup; original error propagates unchanged
       if (fileKey) {
