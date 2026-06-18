@@ -262,6 +262,30 @@
           }
         },
         {
+          "name": "Get Provider Compliance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/providers/{{provider_id}}/compliance",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers",
+                "{{provider_id}}",
+                "compliance"
+              ]
+            },
+            "description": "Computes compliance on demand for a provider. Admin sees any provider; provider sees only own. Returns isCompliant (bool), missingDocuments, expired, and expiringSoon arrays. A provider with no active employees or vehicles is compliant as long as tax_id is present. expiringSoon does not affect isCompliant — it is informational only."
+          }
+        },
+        {
           "name": "Approve Provider",
           "request": {
             "method": "POST",
