@@ -2,6 +2,7 @@
 
 const express = require('express');
 const controller = require('../controllers/serviceProvider.controller');
+const complianceController = require('../controllers/compliance.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
 const requireRole = require('../middlewares/requireRole.middleware');
 const validate = require('../middlewares/validate.middleware');
@@ -16,5 +17,6 @@ router.get('/:id', authMiddleware, validate(schemas.show), controller.show);
 router.post('/:id/approve', authMiddleware, requireRole('admin'), validate(schemas.approve), controller.approve);
 router.post('/:id/reject', authMiddleware, requireRole('admin'), validate(schemas.reject), controller.reject);
 router.post('/:id/deactivate', authMiddleware, requireRole('admin'), validate(schemas.deactivate), controller.deactivate);
+router.get('/:id/compliance', authMiddleware, validate(schemas.compliance), complianceController.compute);
 
 module.exports = router;

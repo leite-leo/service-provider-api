@@ -23,6 +23,7 @@ const list       = paginationQuery;
 const show       = providerParams;
 const approve    = providerParams;
 const deactivate = providerParams;
+const compliance = providerParams;
 
 const create = z.object({
   body: z.object({
@@ -51,4 +52,4 @@ const reject = z.object({
   }),
 });
 
-module.exports = { list, show, create, approve, deactivate, submit, reject };
+module.exports = { list, show, create, approve, deactivate, submit, reject, compliance };
