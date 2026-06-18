@@ -2,6 +2,7 @@
 
 const { Employee, ServiceProvider } = require('../models');
 const { NotFoundError, ConflictError, ForbiddenError } = require('../utils/errors.utils');
+const documentService = require('./document.service');
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
@@ -19,10 +20,24 @@ async function ensureProviderCanManageEmployees(providerId) {
 }
 
 class EmployeeService {
-  async findById(id) {
+  /*
+   * Internal helper used by mutation methods (update, deactivate)
+   * that need a live Sequelize instance to call .save() on.
+   * The public findById returns a plain enriched object instead.
+   */
+  async _findEmployeeRecord(id) {
     const employee = await Employee.findByPk(id);
     if (!employee) throw new NotFoundError('Employee not found');
     return employee;
+  }
+
+  async findById(id) {
+    const employee = await this._findEmployeeRecord(id);
+    const documents = await documentService.getActiveDocumentsMap('employee', employee.id);
+    return {
+      ...employee.toJSON(),
+      documents,
+    };
   }
 
   async findAll(
@@ -74,7 +89,7 @@ class EmployeeService {
   }
 
   async update(id, data, requestingUser) {
-    const employee = await this.findById(id);
+    const employee = await this._findEmployeeRecord(id);
 
     if (employee.serviceProviderId !== requestingUser.serviceProviderId) {
       throw new ForbiddenError("Cannot update another provider's employee");
@@ -91,7 +106,7 @@ class EmployeeService {
   }
 
   async deactivate(id, requestingUser) {
-    const employee = await this.findById(id);
+    const employee = await this._findEmployeeRecord(id);
 
     if (employee.serviceProviderId !== requestingUser.serviceProviderId) {
       throw new ForbiddenError("Cannot deactivate another provider's employee");
