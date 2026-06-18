@@ -108,6 +108,25 @@ class DocumentService {
     };
   }
 
+  async getActiveDocumentsMap(ownerType, ownerId) {
+    const where = { status: 'active' };
+    if (ownerType === 'provider') {
+      where.serviceProviderId = ownerId;
+      where.employeeId = null;
+      where.vehicleId = null;
+    } else if (ownerType === 'employee') {
+      where.employeeId = ownerId;
+    } else if (ownerType === 'vehicle') {
+      where.vehicleId = ownerId;
+    }
+
+    const docs = await Document.findAll({ where });
+    const entries = await Promise.all(
+      docs.map(async (doc) => [doc.documentType, await serializeDocument(doc)]),
+    );
+    return Object.fromEntries(entries);
+  }
+
   async uploadDocument({ ownerType, ownerId, providerId, documentType, fileKey, issuedAt, expiresAt, uploadedBy }) {
     try {
       await ensureProviderCanUploadDocument(providerId);

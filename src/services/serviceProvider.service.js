@@ -2,17 +2,55 @@
 
 const Sentry = require('@sentry/node');
 const admin = require('../config/firebase.config');
-const { ServiceProvider, User } = require('../models');
+const { ServiceProvider, User, Employee, Vehicle } = require('../models');
 const { NotFoundError, ConflictError, ForbiddenError } = require('../utils/errors.utils');
+const documentService = require('./document.service');
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 
 class ServiceProviderService {
-  async findById(id) {
+  /*
+   * Internal helper used by mutation methods (approve, deactivate, submit,
+   * reject) that need a live Sequelize instance to call .save() on.
+   * The public findById returns a plain enriched object instead.
+   */
+  async _findProviderRecord(id) {
     const provider = await ServiceProvider.findByPk(id);
     if (!provider) throw new NotFoundError('Service provider not found');
     return provider;
+  }
+
+  async findById(id) {
+    const provider = await this._findProviderRecord(id);
+
+    // Fetch provider-level documents, active employees, and active vehicles in parallel
+    const [documents, employees, vehicles] = await Promise.all([
+      documentService.getActiveDocumentsMap('provider', provider.id),
+      Employee.findAll({ where: { serviceProviderId: provider.id, status: 'active' } }),
+      Vehicle.findAll({ where: { serviceProviderId: provider.id, status: 'active' } }),
+    ]);
+
+    // Enrich each employee and vehicle with their own active documents
+    const enrichedEmployees = await Promise.all(
+      employees.map(async (emp) => ({
+        ...emp.toJSON(),
+        documents: await documentService.getActiveDocumentsMap('employee', emp.id),
+      })),
+    );
+    const enrichedVehicles = await Promise.all(
+      vehicles.map(async (veh) => ({
+        ...veh.toJSON(),
+        documents: await documentService.getActiveDocumentsMap('vehicle', veh.id),
+      })),
+    );
+
+    return {
+      ...provider.toJSON(),
+      documents,
+      employees: enrichedEmployees,
+      vehicles: enrichedVehicles,
+    };
   }
 
   async findAll({ status, country, page = 1, limit = DEFAULT_PAGE_SIZE } = {}) {
@@ -118,7 +156,7 @@ class ServiceProviderService {
   }
 
   async approve(id, adminUserId) {
-    const provider = await this.findById(id);
+    const provider = await this._findProviderRecord(id);
     if (provider.status !== 'pending_review') {
       throw new ConflictError(`Cannot approve a provider in ${provider.status} state`, 'ACTION_BLOCKED');
     }
@@ -138,7 +176,7 @@ class ServiceProviderService {
   }
 
   async deactivate(id, adminUserId) {
-    const provider = await this.findById(id);
+    const provider = await this._findProviderRecord(id);
     if (!['pending', 'pending_review', 'approved'].includes(provider.status)) {
       throw new ConflictError(`Cannot deactivate a provider in ${provider.status} state`, 'ACTION_BLOCKED');
     }
@@ -151,7 +189,7 @@ class ServiceProviderService {
   }
 
   async submit(providerId, requestingUser) {
-    const provider = await this.findById(providerId);
+    const provider = await this._findProviderRecord(providerId);
     if (
       requestingUser.role !== 'provider'
       || requestingUser.serviceProviderId !== providerId
@@ -170,7 +208,7 @@ class ServiceProviderService {
   }
 
   async reject(id, adminUserId, reason) {
-    const provider = await this.findById(id);
+    const provider = await this._findProviderRecord(id);
     if (provider.status !== 'pending_review') {
       throw new ConflictError(`Cannot reject a provider in ${provider.status} state`, 'ACTION_BLOCKED');
     }
