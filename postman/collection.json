@@ -347,6 +347,63 @@
           }
         },
         {
+          "name": "List Provider Documents",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json();",
+                  "console.log(`Provider documents: ${data.data?.length || 0} of ${data.pagination?.total || 0}`);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/providers/{{provider_id}}/documents?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "providers",
+                "{{provider_id}}",
+                "documents"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "active",
+                  "disabled": true
+                },
+                {
+                  "key": "documentType",
+                  "value": "tax_id",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Lists documents owned by the provider. Admin sees any provider's; provider sees only own. Optional filters: status (active | archived | expired), documentType. Pagination via page and limit. Default ordering: createdAt DESC."
+          }
+        },
+        {
           "name": "Upload Provider Document",
           "event": [
             {
@@ -588,6 +645,63 @@
               ]
             },
             "description": "Provider only. Soft-deletes the employee by setting status to 'inactive'. Requires provider status 'pending' or 'approved'. Returns 409 if the employee is already inactive."
+          }
+        },
+        {
+          "name": "List Employee Documents",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json();",
+                  "console.log(`Employee documents: ${data.data?.length || 0} of ${data.pagination?.total || 0}`);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employees/{{employee_id}}/documents?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees",
+                "{{employee_id}}",
+                "documents"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "active",
+                  "disabled": true
+                },
+                {
+                  "key": "documentType",
+                  "value": "driver_license",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Lists documents owned by the employee. Admin sees any employee's; provider sees only own employee's. Valid documentType filter values for this endpoint: government_id, driver_license, employment_contract."
           }
         },
         {
@@ -840,6 +954,63 @@
           }
         },
         {
+          "name": "List Vehicle Documents",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json();",
+                  "console.log(`Vehicle documents: ${data.data?.length || 0} of ${data.pagination?.total || 0}`);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/vehicles/{{vehicle_id}}/documents?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vehicles",
+                "{{vehicle_id}}",
+                "documents"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "active",
+                  "disabled": true
+                },
+                {
+                  "key": "documentType",
+                  "value": "vehicle_registration",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Lists documents owned by the vehicle. Admin sees any vehicle's; provider sees only own vehicle's. The only valid documentType filter value for this endpoint is vehicle_registration."
+          }
+        },
+        {
           "name": "Upload Vehicle Document",
           "event": [
             {
@@ -901,6 +1072,48 @@
               ]
             },
             "description": "Uploads a document for a vehicle. Attach a PDF or image to the `file` field before sending. Only valid documentType for this endpoint is `vehicle_registration`. expiresAt is required for this document type. Run \"Login Provider\" first to populate id_token."
+          }
+        }
+      ]
+    }
+    ,
+    {
+      "name": "Documents",
+      "item": [
+        {
+          "name": "Get Document",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json();",
+                  "console.log(`Document type: ${data.documentType}, status: ${data.status}`);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/documents/{{document_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "documents",
+                "{{document_id}}"
+              ]
+            },
+            "description": "Fetches a single document by its UUID. Admin sees any document; provider sees only docs owned by their own provider scope (returns 403 otherwise). Each call generates a fresh presigned URL with 15-minute TTL. The {{document_id}} variable is auto-populated by the most recent Upload * Document request."
           }
         }
       ]
