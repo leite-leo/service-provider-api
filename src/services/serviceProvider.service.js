@@ -199,6 +199,10 @@ class ServiceProviderService {
     if (provider.status !== 'pending') {
       throw new ConflictError(`Cannot submit a provider in ${provider.status} state`, 'ACTION_BLOCKED');
     }
+    const compliance = await complianceService.compute(providerId, requestingUser);
+    if (!compliance.isCompliant) {
+      throw new UnprocessableError('Provider does not meet compliance requirements', compliance);
+    }
     const now = new Date();
     provider.status = 'pending_review';
     provider.statusChangedAt = now;
