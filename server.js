@@ -8,6 +8,7 @@ const errorMiddleware = require('./src/middlewares/error.middleware');
 const { runPendingMigrations } = require('./src/utils/migrate.utils');
 const { runSeeders } = require('./src/utils/seed.utils');
 const { NotFoundError } = require('./src/utils/errors.utils');
+const startDocumentExpirationJob = require('./src/jobs/documentExpiration.job');
 
 const app = express();
 
@@ -45,6 +46,8 @@ async function bootstrap() {
   app.listen(config.app.port, () => {
     console.log(`Server listening on port ${config.app.port}`);
   });
+
+  startDocumentExpirationJob();
 }
 
 bootstrap().catch((error) => {
