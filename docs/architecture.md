@@ -119,7 +119,7 @@ What this demonstrates technically: integration with an external identity provid
 - `POST /providers` is public (no authentication required).
 - The `ServiceProvider` record carries no `created_by` audit field; self-registration removes the meaningful audit semantic.
 - The provider lifecycle introduces an intermediate `pending_review` state between `pending` and `approved`, marking "provider has signaled completion, awaiting admin decision".
-- Approval is gated by compliance passing. Admin cannot approve a non-compliant provider; the approve endpoint returns HTTP 422 with details of missing or expired documents in that case.
+- Both the submit and approve transitions are gated by compliance passing. A non-compliant provider cannot submit for review or be approved; both endpoints return HTTP 422 with details of missing or expired documents.
 - Production hardening (rate limiting, CAPTCHA on public registration, email verification before provider can submit) is out of declared scope for this version and documented as future work.
 
 ### Soft Delete via Status Fields
@@ -199,7 +199,7 @@ The service walks the provider's required documents (own `tax_id`, each active e
 
 This design choice — computation over storage — avoids the cache invalidation problems that come with a denormalized compliance column. The endpoint runs a bounded number of queries and is fast enough for the scale of this project.
 
-Beyond informational use, compliance is a functional gate for provider approval. `POST /providers/:id/approve` checks compliance before transitioning the status; a non-compliant provider receives HTTP 422 with the compliance details in the error body, and the status transition does not occur. This makes the compliance endpoint both a query tool for administrators and a precondition for approval.
+Beyond informational use, compliance is a functional gate for both provider state transitions. `POST /providers/me/submit` checks compliance before moving the provider to `pending_review`; `POST /providers/:id/approve` checks it again before finalizing approval. In both cases a non-compliant provider receives HTTP 422 with the compliance details in the error body and the status transition does not occur. This ensures compliance must pass at every forward-moving gate in the lifecycle, not only at the final approval step.
 
 ### Document Expiration Job
 
@@ -213,7 +213,7 @@ Provider status transitions are exposed via dedicated endpoints rather than a ge
 
 The full set of transitions:
 
-- `pending → pending_review` — provider self-submits via `POST /providers/me/submit`.
+- `pending → pending_review` — provider self-submits via `POST /providers/me/submit`, gated by compliance passing.
 - `pending_review → pending` — admin rejects via `POST /providers/:id/reject`.
 - `pending_review → approved` — admin approves via `POST /providers/:id/approve`, gated by compliance passing.
 - `pending → inactive` — admin deactivates.

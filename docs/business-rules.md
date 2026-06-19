@@ -35,7 +35,7 @@ The flow is:
 
 3. The provider populates operational data: employees, vehicles, and required compliance documents. All these resources are scoped to their own `ServiceProvider`.
 
-4. When the provider considers their data complete, they signal readiness for review via `POST /providers/me/submit`. The `ServiceProvider` status transitions from `pending` to `pending_review`. While in `pending_review`, the provider data becomes read-only.
+4. When the provider considers their data complete, they signal readiness for review via `POST /providers/me/submit`. The endpoint checks compliance before accepting the submission; a non-compliant provider receives HTTP 422 with the compliance details and remains in `pending`. If compliance passes, the `ServiceProvider` status transitions from `pending` to `pending_review`. While in `pending_review`, the provider data becomes read-only.
 
 5. The administrator reviews the provider's data and computes compliance via `GET /providers/:id/compliance`. Based on the compliance result:
    - If compliance is passing, the admin approves via `POST /providers/:id/approve`. The `ServiceProvider` transitions to `approved` status.
@@ -123,7 +123,7 @@ Valid transitions:
 - `pending_review → inactive` (admin deactivates)
 - `approved → inactive` (admin deactivates)
 
-Every status transition records `status_changed_at` (timestamp) and `status_changed_by` (user id) on the provider. For `pending_review → approved`, `approved_at` and `approved_by` are additionally recorded as a permanent marker of the approval event. Provider approval requires the compliance check to be in passing state; otherwise the approve endpoint returns HTTP 422 with the compliance details.
+Every status transition records `status_changed_at` (timestamp) and `status_changed_by` (user id) on the provider. For `pending_review → approved`, `approved_at` and `approved_by` are additionally recorded as a permanent marker of the approval event. Both the submit and approve transitions are gated by compliance: `POST /providers/me/submit` and `POST /providers/:id/approve` each check compliance internally and return HTTP 422 with the compliance details if the provider is not compliant.
 
 ### Employee and Vehicle Status
 
@@ -189,7 +189,7 @@ The compliance status is computed on demand by the endpoint `GET /providers/:id/
 
 Compliance is computed in real time; it is not stored as a column on the provider. The single exception is that the daily job marks documents as `expired`, which affects subsequent compliance computations.
 
-Compliance functions as both an informational endpoint and a gate for provider approval. The `POST /providers/:id/approve` endpoint checks compliance internally and returns HTTP 422 with the compliance details if the provider is not compliant. This ensures no provider is approved while missing required documents or carrying expired ones.
+Compliance functions as both an informational endpoint and a gate for provider state transitions. Both `POST /providers/me/submit` and `POST /providers/:id/approve` check compliance internally and return HTTP 422 with the compliance details if the provider is not compliant. This ensures providers can only advance through the lifecycle while carrying all required, non-expired documents.
 
 ## Permission Rules
 

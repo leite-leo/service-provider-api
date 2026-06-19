@@ -323,11 +323,11 @@ For a more detailed account of the workflow, see the *Development Methodology* s
 - Render deployment with Neon-hosted PostgreSQL
 - Seed data for demo administrator
 - Document CRUD with polymorphic linkage, S3 storage with presigned URLs, and enriched single-resource GET responses
+- Compliance computation endpoint (GET /providers/:id/compliance)
+- Provider submit and approval gating by compliance
+- Daily document expiration job (03:00 UTC)
 
 ### Planned
-- Compliance computation endpoint
-- Provider approval gating by compliance (currently deferred via TODO)
-- Daily scheduled job to mark expired documents
 - Swagger / OpenAPI interactive documentation
 - Admin write capability for operational sub-resources (design choice intentionally deferred)
 
