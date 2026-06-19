@@ -3,8 +3,9 @@
 const Sentry = require('@sentry/node');
 const admin = require('../config/firebase.config');
 const { ServiceProvider, User, Employee, Vehicle } = require('../models');
-const { NotFoundError, ConflictError, ForbiddenError } = require('../utils/errors.utils');
+const { NotFoundError, ConflictError, ForbiddenError, UnprocessableError } = require('../utils/errors.utils');
 const documentService = require('./document.service');
+const complianceService = require('./compliance.service');
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
@@ -160,11 +161,10 @@ class ServiceProviderService {
     if (provider.status !== 'pending_review') {
       throw new ConflictError(`Cannot approve a provider in ${provider.status} state`, 'ACTION_BLOCKED');
     }
-    /*
-     * TODO: Once the compliance endpoint is implemented, gate the approval
-     * here. Provider must have compliance passing; otherwise throw a 422
-     * with the compliance details. See architecture.md, "Compliance Computation".
-     */
+    const compliance = await complianceService.compute(id, { role: 'admin' });
+    if (!compliance.isCompliant) {
+      throw new UnprocessableError('Provider does not meet compliance requirements', compliance);
+    }
     const now = new Date();
     provider.status = 'approved';
     provider.approvedAt = now;

@@ -31,4 +31,10 @@ class ConflictError extends AppError {
   }
 }
 
-module.exports = { AppError, ValidationError, UnauthorizedError, ForbiddenError, NotFoundError, ConflictError };
+class UnprocessableError extends AppError {
+  constructor(message, details) {
+    super(message, 422, 'COMPLIANCE_FAILED', details);
+  }
+}
+
+module.exports = { AppError, ValidationError, UnauthorizedError, ForbiddenError, NotFoundError, ConflictError, UnprocessableError };
