@@ -9,6 +9,8 @@ const { runPendingMigrations } = require('./src/utils/migrate.utils');
 const { runSeeders } = require('./src/utils/seed.utils');
 const { NotFoundError } = require('./src/utils/errors.utils');
 const startDocumentExpirationJob = require('./src/jobs/documentExpiration.job');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./src/config/swagger.config');
 
 const app = express();
 
@@ -17,6 +19,7 @@ app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use(routes);
 
 // 404 handler for unmatched routes — must come AFTER all route definitions
